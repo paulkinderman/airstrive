@@ -1,9 +1,10 @@
-// expo-file-system backed by a real temp folder, so export code reads and writes actual files.
+// expo-file-system backed by a real temp folder, so export and sync code read and write actual files.
+// Paths.document can be pointed at another folder to play a second phone.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'airstrive-export-'));
+export const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'airstrive-fs-'));
 const toPath = (uri: string) => uri.replace(/^file:\/*/, '/');
 
 export class File {
@@ -20,6 +21,14 @@ export class File {
   async bytes() { return new Uint8Array(fs.readFileSync(toPath(this.uri))); }
   async base64() { return fs.readFileSync(toPath(this.uri)).toString('base64'); }
   async write(content: string | Uint8Array) { fs.writeFileSync(toPath(this.uri), content); }
+
+  static async downloadFileAsync(url: string, dest: File) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`download failed: ${res.status}`);
+    fs.mkdirSync(path.dirname(toPath(dest.uri)), { recursive: true });
+    fs.writeFileSync(toPath(dest.uri), new Uint8Array(await res.arrayBuffer()));
+    return dest;
+  }
 }
 
 export class Directory extends File {
@@ -27,6 +36,6 @@ export class Directory extends File {
 }
 
 export const Paths = {
-  document: { uri: `file://${root}/documents` },
-  cache: { uri: `file://${root}/cache` },
+  document: { uri: `file://${tempRoot}/documents` },
+  cache: { uri: `file://${tempRoot}/cache` },
 };

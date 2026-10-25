@@ -1,0 +1,34 @@
+name: Integration
+
+# Runs the app's sync code against a throwaway Supabase that `supabase start` brings up
+# in Docker on the runner. Nothing here can reach the dev or production projects.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase
+        run: npx -y supabase@2.122.0 start -x studio,imgproxy,vector,logflare,supavisor,realtime,mailpit,postgres-meta
+      - run: npm run test:integration
+      - name: Supabase logs on failure
+        if: failure()
+        run: |
+          for c in $(docker ps --format '{{.Names}}' | grep supabase_); do echo "::group::$c"; docker logs --tail 80 "$c" 2>&1; echo "::endgroup::"; done
+      - if: always()
+        run: npx -y supabase@2.122.0 stop --no-backup

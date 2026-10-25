@@ -4,10 +4,10 @@
     "paths": {
       "@/*": ["../../src/*"],
       "expo-crypto": ["../stubs/expo-crypto.ts"],
-      "expo-file-system": ["./stubs/expo-file-system.ts"],
-      "expo-print": ["./stubs/expo-print.ts"]
+      "expo-file-system": ["../realfs/expo-file-system.ts"],
+      "expo-print": ["../realfs/expo-print.ts"]
     }
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../realfs/*.ts"],
   "exclude": []
 }

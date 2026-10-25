@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../../src/*"],
+      "expo-crypto": ["../stubs/expo-crypto.ts"],
+      "expo-file-system": ["../realfs/expo-file-system.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "../realfs/*.ts"],
+  "exclude": []
+}
