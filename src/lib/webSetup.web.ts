@@ -9,6 +9,7 @@ import { colors } from '@/theme';
  * 2. On a wide screen the app sits in a phone-width column instead of stretching. Screens size
  *    the board and photos from the window width, so the window reports the column's width.
  *    Screens with a wide layout (src/ui/wide.web.ts) lift the column while they're in front.
+ * 3. On the deployed site, Vercel Web Analytics counts page views (cookieless, see the privacy page).
  */
 
 const COLUMN = 480;
@@ -118,4 +119,10 @@ if (typeof document !== 'undefined') {
   style.textContent = css;
   document.head.appendChild(style);
   Alert.alert = showAlert;
+  if (!__DEV__) {
+    const analytics = document.createElement('script');
+    analytics.defer = true;
+    analytics.src = '/_vercel/insights/script.js';
+    document.head.appendChild(analytics);
+  }
 }
