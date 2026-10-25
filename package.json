@@ -48,7 +48,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p test",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test && tsc --noEmit -p test/export",
     "test": "bash test/run.sh",
     "test:db": "bash supabase/tests/run.sh",
     "starter-sql": "tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql"

@@ -25,5 +25,5 @@
     "./**/*.ts",
     "../scripts/**/*.ts"
   ],
-  "exclude": []
+  "exclude": ["./export/**"]
 }
