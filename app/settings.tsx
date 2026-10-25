@@ -1,14 +1,14 @@
 import { useCallback, useState } from 'react';
-import { View, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-import * as Sharing from 'expo-sharing';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
 import { buildExport } from '@/lib/exportData';
+import { shareZip } from '@/lib/share';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors, radius } from '@/theme';
@@ -47,7 +47,7 @@ export default function Settings() {
       await sync.syncNow();
       const uri = await buildExport(db, auth.username ?? 'me', setExporting);
       setExporting(null);
-      await Sharing.shareAsync(uri, { mimeType: 'application/zip', dialogTitle: 'Your AirStrive export', UTI: 'public.zip-archive' });
+      await shareZip(uri);
     } catch (e) {
       Alert.alert("Couldn't finish the export", e instanceof Error ? e.message : 'Try again in a moment.');
     } finally {
@@ -126,7 +126,7 @@ export default function Settings() {
         <View style={styles.card}>
           <Text variant="label">Your data</Text>
           <Text variant="body" style={{ color: colors.muted, fontSize: 14 }}>
-            A zip with every moment as JSON, all your photos, and a PDF of Memory Lane.
+            A zip with every moment as JSON, all your photos, and {Platform.OS === 'web' ? 'Memory Lane as a page you can print' : 'a PDF of Memory Lane'}.
           </Text>
           <Button label={exporting ? `${exporting}…` : 'Export my data'} kind="secondary" onPress={exportData} disabled={!!exporting} />
         </View>

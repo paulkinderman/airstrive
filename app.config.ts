@@ -18,5 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: config.slug ?? 'airstrive',
     ios: { ...config.ios, usesAppleSignIn: true },
     plugins,
+    // The website serves the web build under /app (see scripts/build-site.sh).
+    experiments: { ...config.experiments, ...(process.env.WEB_BASE_URL ? { baseUrl: process.env.WEB_BASE_URL } : {}) },
   };
 };
