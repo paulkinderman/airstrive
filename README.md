@@ -62,6 +62,8 @@ npm run build:site    # writes dist-site/: website/ at the root, the app under /
 5. So Google's account picker names your site rather than the Supabase project, also add `https://<your-domain>/app/` as an authorized redirect URI on the same Google client, and set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel. Without that variable the site signs in through Supabase as in step 4.
 6. Email sign-in sends a 6-digit code. In Supabase → Authentication → Emails, add `{{ .Token }}` to the Magic Link template. Supabase's built-in mailer only reaches the project's team members, so set up custom SMTP before anyone else signs in by email.
 
+Vercel Web Analytics counts page views on the website and the web app (cookieless; turn it on in the Vercel project's Analytics tab). The phone app has none.
+
 On a computer screen (at least 960 px wide) a few screens switch to wide layouts from `src/wide/`. The grid page shows the board beside a panel for the selected square, with hover previews and arrow keys. Mosaic mode shows the whole grid on a dark wall. Memory Lane pages open as a two-page book. Every other screen stays in a phone-width column. `useWideLayout()` in `src/ui/wide.web.ts` decides which layout to use, and it is always false on phones.
 
 The app pages need `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` (expo-sqlite uses SharedArrayBuffer). `vercel.json` sends them for `/app`, and `metro.config.js` does the same for `npx expo start --web`.
