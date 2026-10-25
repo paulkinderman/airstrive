@@ -10,6 +10,7 @@ export class File {
   async bytes() { return new Uint8Array(); }
   async base64() { return ''; }
   async write(_content: unknown) {}
+  static async downloadFileAsync(_url: string, _to: File) {}
 }
 export class Directory extends File {}
 export const Paths = { document: { uri: 'file:///docs' } };

@@ -49,7 +49,7 @@ type GoogleModule = typeof import('@react-native-google-signin/google-signin');
 function google(): GoogleModule | null {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  if (!webClientId || (Platform.OS === 'ios' && !iosClientId)) return null;
+  if (Platform.OS === 'web' || !webClientId || (Platform.OS === 'ios' && !iosClientId)) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod: GoogleModule = require('@react-native-google-signin/google-signin');
@@ -144,7 +144,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    if (!supabase || !googleMod) return;
+    if (!supabase) return;
+    if (Platform.OS === 'web') {
+      // Leaves the page for Google; supabase.ts picks the session up when it comes back.
+      const redirectTo = new URL(process.env.EXPO_BASE_URL || '/', window.location.origin).href.replace(/\/?$/, '/');
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      if (error) throw error;
+      return;
+    }
+    if (!googleMod) return;
     const { GoogleSignin, isErrorWithCode, statusCodes } = googleMod;
     try {
       await GoogleSignin.hasPlayServices();
@@ -226,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     suggestedName,
     configured: !!supabase,
     appleAvailable: appleAvailable && !!supabase,
-    googleAvailable: !!googleMod && !!supabase,
+    googleAvailable: (!!googleMod || Platform.OS === 'web') && !!supabase,
     signInWithApple,
     signInWithGoogle,
     continueOffline,

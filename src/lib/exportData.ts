@@ -1,18 +1,17 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { File, Paths } from 'expo-file-system';
-import * as Print from 'expo-print';
 import JSZip from 'jszip';
 import { listPages } from '@/db/repo';
 import { chapterCaption, scrapbookHtml, type PrintPage } from './printables';
 import { fileExists, readBase64, readBytes } from './files';
+import { saveZip, scrapbookFile } from './share';
 import { todayLocal } from './ids';
 
 const mimeOf = (path: string) => (path.endsWith('.jpg') ? 'image/jpeg' : 'image/webp');
 
 /**
  * Builds "AirStrive export <date>.zip" in the cache folder: moments.json with every grid
- * and moment, photos/ at their stored size, and memory-lane.pdf rendered from the pages.
- * Returns the zip's URI for the share sheet.
+ * and moment, photos/ at their stored size, and memory-lane.pdf rendered from the pages
+ * (memory-lane.html on the web, ready to print). Returns the zip's URI for shareZip.
  */
 export async function buildExport(db: SQLiteDatabase, username: string, onStep?: (step: string) => void): Promise<string> {
   onStep?.('Gathering your grids');
@@ -89,15 +88,10 @@ export async function buildExport(db: SQLiteDatabase, username: string, onStep?:
       });
     }
   }
-  const pdf = await Print.printToFileAsync({ html: scrapbookHtml(printPages, username), width: 612, height: 792 });
-  zip.file('memory-lane.pdf', await new File(pdf.uri).bytes());
-  try { new File(pdf.uri).delete(); } catch { /* temp file */ }
+  const scrapbook = await scrapbookFile(scrapbookHtml(printPages, username));
+  zip.file(scrapbook.name, scrapbook.bytes);
 
   onStep?.('Zipping');
   const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
-  const out = new File(Paths.cache, `AirStrive export ${todayLocal()}.zip`);
-  if (out.exists) out.delete();
-  out.create();
-  await out.write(bytes);
-  return out.uri;
+  return saveZip(bytes, `AirStrive export ${todayLocal()}.zip`);
 }

@@ -31,7 +31,13 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single",
+      "name": "AirStrive",
+      "shortName": "AirStrive",
+      "description": "Fill in grids of small experiences, one square at a time, and keep the photos and words as a scrapbook.",
+      "themeColor": "#F5B61C",
+      "backgroundColor": "#FBFAF7"
     },
     "plugins": [
       "expo-router",

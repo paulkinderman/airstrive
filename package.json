@@ -35,6 +35,7 @@
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
     "react-native-svg": "^15.16.0",
+    "react-native-web": "^0.21.4",
     "react-native-worklets": "^0.13.0"
   },
   "devDependencies": {
@@ -51,7 +52,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p test",
     "test": "bash test/run.sh",
     "test:db": "bash supabase/tests/run.sh",
-    "starter-sql": "tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql"
+    "starter-sql": "tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql",
+    "build:site": "bash scripts/build-site.sh"
   },
   "private": true
 }

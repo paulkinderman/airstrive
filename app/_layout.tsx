@@ -9,6 +9,8 @@ import { useFonts, Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fon
 import { Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import { Caveat_500Medium } from '@expo-google-fonts/caveat';
 import { migrate } from '@/db/schema';
+import { loadPhotos } from '@/lib/files';
+import '@/lib/webSetup';
 import { AuthProvider, useAuth, type AuthStatus } from '@/auth/AuthProvider';
 import { SyncProvider } from '@/sync/SyncProvider';
 import { Text } from '@/ui/Text';
@@ -31,7 +33,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SQLiteProvider databaseName="airstrive.db" onInit={migrate}>
+      <SQLiteProvider databaseName="airstrive.db" onInit={async (db) => { await loadPhotos(); await migrate(db); }}>
         <StatusBar style="dark" />
         <AuthProvider>
           <Routes />

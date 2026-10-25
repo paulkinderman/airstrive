@@ -6,11 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { getChapter, listPages, type Chapter, type Page } from '@/db/repo';
 import { readBase64 } from '@/lib/files';
 import { chapterCaption, posterHtml } from '@/lib/printables';
+import { printHtml, shareHtmlAsPdf } from '@/lib/share';
 import { useDataVersion } from '@/sync/events';
 import { PageLink, openPage } from '@/ui/PageLink';
 import { Text } from '@/ui/Text';
@@ -65,15 +64,14 @@ export default function ChapterCover() {
   const print = async () => {
     if (busy) return;
     setBusy(true);
-    try { await Print.printAsync({ html: await posterFor(c) }); } catch { /* cancelled */ } finally { setBusy(false); }
+    try { await printHtml(await posterFor(c)); } catch { /* cancelled */ } finally { setBusy(false); }
   };
 
   const share = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      const { uri } = await Print.printToFileAsync({ html: await posterFor(c) });
-      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `${c.gridTitle}, complete` });
+      await shareHtmlAsPdf(await posterFor(c), `${c.gridTitle}, complete`);
     } catch {
       Alert.alert("Couldn't make the poster", 'Try again in a moment.');
     } finally {

@@ -68,6 +68,11 @@ export default function Welcome() {
               : "Sign in with Apple isn't available on this device."}
           </Text>
         )}
+        {Platform.OS === 'web' && auth.configured && (
+          <Text variant="caption" style={{ textAlign: 'center' }}>
+            Sign in with Apple works in the phone app. On the web, use Google.
+          </Text>
+        )}
         {__DEV__ && !auth.configured && <Button label="Continue on this phone only (dev)" kind="secondary" onPress={auth.continueOffline} />}
         <Text variant="caption" style={{ textAlign: 'center', paddingTop: 4 }}>
           Your moments stay private unless you choose to share them.
