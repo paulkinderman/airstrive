@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, LogBox } from 'react-native';
 import { Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +17,9 @@ import { MiniGrid } from '@/ui/MiniGrid';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// The UI tests run a dev build; keep the warning banner from covering the bottom buttons.
+if (process.env.EXPO_PUBLIC_E2E === '1') LogBox.ignoreAllLogs();
 
 export default function RootLayout() {
   const [loaded] = useFonts({

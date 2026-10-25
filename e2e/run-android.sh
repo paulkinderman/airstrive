@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 out="${E2E_OUT:-e2e/out}"
 mkdir -p "$out"
 
-CI=1 npx expo start --port 8081 >"$out/metro.log" 2>&1 &
+CI=1 EXPO_PUBLIC_E2E=1 npx expo start --port 8081 >"$out/metro.log" 2>&1 &
 metro=$!
 trap 'kill $metro 2>/dev/null || true' EXIT
 for _ in $(seq 1 60); do curl -sf http://localhost:8081/status >/dev/null && break; sleep 2; done
