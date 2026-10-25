@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { seedGridTemplates } from '@/data/seed';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** v0's schema, kept as-is so phones that ran v0 upgrade through the same path. */
 export const V1 = `
@@ -145,6 +145,16 @@ const V2 = `
   );
 `;
 
+/**
+ * v2: grids people make. A grid knows its author and whether it is official, and a grid
+ * the person made syncs up through the queue like their other rows.
+ */
+const V3 = `
+  ALTER TABLE grids ADD COLUMN author_id TEXT;
+  ALTER TABLE grids ADD COLUMN is_official INTEGER NOT NULL DEFAULT 0;
+  UPDATE grids SET is_official = 1 WHERE made_by = 'AirStrive' AND author_id IS NULL;
+`;
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -164,6 +174,14 @@ export async function migrate(db: SQLiteDatabase) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(V2);
       await db.execAsync('PRAGMA user_version = 2');
+    });
+    current = 2;
+  }
+
+  if (current < 3) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(V3);
+      await db.execAsync('PRAGMA user_version = 3');
     });
   }
 

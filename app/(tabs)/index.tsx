@@ -99,6 +99,15 @@ export default function Home() {
             <Text variant="bodyBold" style={{ fontSize: 13, color: colors.accentDeep }}>+ New grid</Text>
           </Pressable>
         </View>
+        {shelf.length === 0 && (
+          <Pressable onPress={() => router.push('/atlas')} style={styles.empty}>
+            <Text variant="title">Your shelf is empty</Text>
+            <Text variant="body" style={{ fontSize: 14, color: colors.muted }}>
+              Find a grid in the Atlas, or make your own about anything you like.
+            </Text>
+            <Text variant="bodyBold" style={{ fontSize: 14, color: colors.accentDeep }}>Open the Atlas</Text>
+          </Pressable>
+        )}
         {shelf.map((g) => (
           <Pressable key={g.userGridId} onPress={() => router.push({ pathname: '/grid/[id]', params: { id: g.userGridId } })} style={styles.gridCard}>
             <MiniGrid states={g.states} cols={g.cols} color={g.color} cell={g.cols >= 10 ? 5 : g.cols >= 8 ? 6 : 8} />
@@ -124,5 +133,6 @@ const styles = StyleSheet.create({
   suggestion: { width: 170, minHeight: 118, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, gap: 10 },
   avatar: { backgroundColor: colors.ink, borderColor: colors.ink },
   badge: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.paper },
+  empty: { padding: 18, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.lineStrong, gap: 6 },
   gridCard: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, minHeight: 84 },
 });

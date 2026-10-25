@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { File, Paths } from 'expo-file-system';
 import { photosDir, readBytes } from '@/lib/files';
-import type { Remote } from './engine';
+import type { Remote, SaveGridResult } from './engine';
 
 const BUCKET = 'photos';
 
@@ -40,6 +40,17 @@ export function supabaseRemote(client: SupabaseClient): Remote {
     },
     async removePhotos(paths) {
       await client.storage.from(BUCKET).remove(paths);
+    },
+    async saveGrid(grid, squares) {
+      const { data, error } = await client.rpc('save_grid', { g: grid, squares });
+      if (error) throw new Error(`grids: ${error.message}`);
+      return data as SaveGridResult;
+    },
+    async saveProfile(profile) {
+      const { data: auth } = await client.auth.getUser();
+      if (!auth.user) throw new Error('not signed in');
+      const { error } = await client.from('users').update(profile).eq('id', auth.user.id);
+      if (error) throw new Error(`users: ${error.message}`);
     },
   };
 }

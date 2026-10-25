@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { getMeta, setMeta } from '@/db/queue';
@@ -12,8 +12,11 @@ import { prepareForUser } from '@/sync/bootstrap';
 import { wipeLocal } from '@/sync/engine';
 import { supabaseRemote } from '@/sync/supabaseRemote';
 import { localFiles } from '@/sync/SyncProvider';
+import { ensureTemplate } from '@/atlas/catalog';
+import { adoptGrid } from '@/data/seed';
+import { removeFromShelf } from '@/db/repo';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'settingUp' | 'setupFailed' | 'needsUsername' | 'ready';
+export type AuthStatus = 'loading' | 'signedOut' | 'settingUp' | 'setupFailed' | 'needsUsername' | 'onboarding' | 'ready';
 
 interface AuthApi {
   status: AuthStatus;
@@ -30,6 +33,8 @@ interface AuthApi {
   /** Development builds without Supabase: use the app on this phone only. */
   continueOffline: () => Promise<void>;
   claimUsername: (name: string) => Promise<'ok' | 'taken' | 'error'>;
+  /** Ends onboarding: saves the interests and puts the chosen grids on the shelf. */
+  finishOnboarding: (interests: string[], gridIds: string[]) => Promise<void>;
   retrySetup: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -100,14 +105,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((await getMeta(db, 'owner')) !== uid) { setStatus('setupFailed'); return; }
     }
     let name = await getMeta(db, 'username');
-    if (!name && supabase) {
-      const { data } = await supabase.from('users').select('username').eq('id', uid).maybeSingle();
-      name = data?.username ?? null;
+    if ((!name || !(await isOnboarded(db))) && supabase) {
+      const { data } = await supabase.from('users').select('username, interests, onboarded_at').eq('id', uid).maybeSingle();
+      if (!name) name = data?.username ?? null;
       if (name) await setMeta(db, 'username', name);
+      if (data?.onboarded_at) {
+        await setMeta(db, 'onboarded_at', data.onboarded_at);
+        await setMeta(db, 'interests', JSON.stringify(data.interests ?? []));
+      }
     }
-    if (!name && uid === OFFLINE_USER) name = 'you';
     setUsername(name);
-    setStatus(name ? 'ready' : 'needsUsername');
+    setStatus(!name ? 'needsUsername' : (await isOnboarded(db)) ? 'ready' : 'onboarding');
   }, [db]);
 
   useEffect(() => {
@@ -159,20 +167,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [db]);
 
   const claimUsername = useCallback(async (raw: string) => {
-    const name = normalizeUsername(raw).trim();
-    if (offline || !supabase) {
-      await setMeta(db, 'username', name);
-      setUsername(name);
-      setStatus('ready');
-      return 'ok' as const;
+    let name = normalizeUsername(raw).trim();
+    if (!offline && supabase) {
+      const { data, error } = await supabase.rpc('claim_username', { name });
+      if (error) return error.message.includes('taken') ? ('taken' as const) : ('error' as const);
+      name = data as string;
     }
-    const { data, error } = await supabase.rpc('claim_username', { name });
-    if (error) return error.message.includes('taken') ? ('taken' as const) : ('error' as const);
-    await setMeta(db, 'username', data as string);
-    setUsername(data as string);
-    setStatus('ready');
+    await setMeta(db, 'username', name);
+    setUsername(name);
+    setStatus((await isOnboarded(db)) ? 'ready' : 'onboarding');
     return 'ok' as const;
   }, [db, offline]);
+
+  const finishOnboarding = useCallback(async (interests: string[], gridIds: string[]) => {
+    if (!userId) return;
+    for (const gridId of gridIds) {
+      if (await ensureTemplate(db, gridId)) await adoptGrid(db, userId, gridId);
+    }
+    // A v1 account's untouched starter shelf makes way for what was picked.
+    const before = await db.getAllAsync<{ id: string; grid_id: string }>('SELECT id, grid_id FROM user_grids WHERE deleted_at IS NULL');
+    for (const ug of before) {
+      if (!gridIds.includes(ug.grid_id)) await removeFromShelf(db, ug.id);
+    }
+    await setMeta(db, 'interests', JSON.stringify(interests));
+    await setMeta(db, 'onboarded_at', new Date().toISOString());
+    await setMeta(db, 'profile_dirty', '1');
+    setStatus('ready');
+  }, [db, userId]);
 
   const forgetPhone = useCallback(async () => {
     await wipeLocal(db);
@@ -210,11 +231,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     continueOffline,
     claimUsername,
+    finishOnboarding,
     retrySetup: async () => { if (userId) await setup(userId); },
     signOut,
     deleteAccount,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
+}
+
+/**
+ * Onboarding happens once per account. Accounts from v1 never saw it: one that has
+ * logged a moment keeps its shelf and skips it; one that hasn't gets to start fresh.
+ */
+async function isOnboarded(db: SQLiteDatabase): Promise<boolean> {
+  if (await getMeta(db, 'onboarded_at')) return true;
+  return !!(await db.getFirstAsync('SELECT 1 AS x FROM moments LIMIT 1'));
 }
 
 export function useAuth(): AuthApi {

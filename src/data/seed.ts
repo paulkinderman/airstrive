@@ -14,8 +14,8 @@ export async function seedGridTemplates(db: SQLiteDatabase) {
     const { cols, rows } = SIZES[g.size];
     await db.withTransactionAsync(async () => {
       await db.runAsync(
-        `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AirStrive', 1, ?)`,
+        `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, is_official, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AirStrive', 1, 1, ?)`,
         g.id, g.title, g.color, g.theme, g.size, cols, rows, g.description, now,
       );
       for (const sq of placeClusters(g)) {
@@ -48,6 +48,23 @@ export async function ensureStarterShelf(db: SQLiteDatabase, userId: string) {
       startedAt: new Date(base - i).toISOString(),
     });
   }
+}
+
+/**
+ * Puts a grid on the person's shelf. The first copy of a grid gets ids derived from the
+ * person and the grid, like the starter shelf, so picking the same grid on two phones
+ * before they sync makes one copy. A grid removed and added again starts fresh.
+ * Returns the existing copy if the grid is already on the shelf.
+ */
+export async function adoptGrid(db: SQLiteDatabase, userId: string, gridId: string): Promise<string> {
+  const live = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM user_grids WHERE grid_id = ? AND deleted_at IS NULL', gridId,
+  );
+  if (live) return live.id;
+  const derived = starterUserGridId(userId, gridId);
+  const taken = await db.getFirstAsync('SELECT 1 AS x FROM user_grids WHERE id = ?', derived);
+  if (taken) return startGrid(db, gridId);
+  return startGrid(db, gridId, { id: derived, squareId: (ugId, idx) => starterSquareId(ugId, idx) });
 }
 
 export async function startGrid(

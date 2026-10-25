@@ -12,6 +12,23 @@ appId: app.airstrive.mobile
 - inputText: "Maestro"
 - hideKeyboard
 - tapOn: "That's me"
+# Onboarding: pick interests, then the two grids the later flows use.
+- extendedWaitUntil:
+    visible: "What are you into?"
+    timeout: 20000
+- tapOn: "Running"
+- tapOn: "Seasons and holidays"
+- tapOn: "Show me grids"
+- assertVisible: "Picked for you"
+- scrollUntilVisible:
+    element: "Add Running"
+- tapOn: "Add Running"
+- scrollUntilVisible:
+    element: "Add Fall"
+- tapOn: "Add Fall"
+- scrollUntilVisible:
+    element: "Add 2 grids to my shelf"
+- tapOn: "Add 2 grids to my shelf"
 - extendedWaitUntil:
     visible: "Your grids"
     timeout: 20000
