@@ -158,7 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (Platform.OS === 'web') {
       const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
       if (clientId) {
-        await startGoogleSignIn(clientId, webRedirect());
+        // The dev server has no website/auth.html, so Google returns straight to the app there.
+        await startGoogleSignIn(clientId, __DEV__ ? webRedirect() : new URL('/auth', window.location.origin).href);
         return;
       }
       // Without a client id, go through Supabase; supabase.ts picks the session up when it comes back.

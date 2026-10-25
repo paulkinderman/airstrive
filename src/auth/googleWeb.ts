@@ -1,12 +1,17 @@
 /**
- * Google sign-in for the web build, straight to Google and back to the app's own address, so
- * Google's account picker names this site rather than the Supabase project. Google returns an
- * ID token in the URL fragment, which Supabase accepts the same way the phone apps' tokens are.
+ * Google sign-in for the web build, straight to Google and back to this site, so Google's account
+ * picker names the site rather than the Supabase project. Google returns an ID token in the URL
+ * fragment, which Supabase accepts the same way the phone apps' tokens are.
+ *
+ * On the deployed site Google returns to /auth (website/auth.html), which saves the fragment under
+ * RETURN_KEY and moves on to /app: Safari can show a blank page when Google's redirect lands on
+ * the app's cross-origin-isolated pages directly.
  */
 
 // localStorage, not sessionStorage: Safari can start a fresh session when the page comes back
 // from Google, because the app's cross-origin isolation headers swap the browsing context.
 const KEY = 'airstrive.googleSignIn';
+const RETURN_KEY = 'airstrive.googleReturn';
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -38,18 +43,24 @@ export interface GoogleReturn {
 }
 
 /**
- * Reads Google's answer from the URL once, before the router can redirect it away, and clears it
- * from the address bar. Null when this page load isn't a return from Google.
+ * Reads Google's answer once, from /auth's note or from the URL (before the router can redirect it
+ * away, clearing it from the address bar). Null when this page load isn't a return from Google.
  */
 function readGoogleReturn(): GoogleReturn | null {
-  if (typeof window === 'undefined' || !window.location?.hash?.includes('state=')) return null;
-  const params = new URLSearchParams(window.location.hash.slice(1));
+  if (typeof window === 'undefined' || !window.location) return null;
+  let fragment = localStorage.getItem(RETURN_KEY);
+  localStorage.removeItem(RETURN_KEY);
+  if (!fragment && window.location.hash.includes('state=')) {
+    fragment = window.location.hash.slice(1);
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  if (!fragment) return null;
+  const params = new URLSearchParams(fragment);
   const saved = localStorage.getItem(KEY);
   if (!saved) return null;
   const { nonce, state } = JSON.parse(saved) as { nonce: string; state: string };
   if (params.get('state') !== state) return null;
   localStorage.removeItem(KEY);
-  history.replaceState(null, '', window.location.pathname + window.location.search);
   const idToken = params.get('id_token');
   if (!idToken) return null; // Closed the picker or said no.
   let givenName: string | null = null;

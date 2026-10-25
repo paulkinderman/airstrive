@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Signing in · AirStrive</title>
+  <link rel="icon" type="image/png" href="/icon-512.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    // Google sends web sign-ins here rather than to /app. Safari can show a blank page when a
+    // cross-origin navigation lands on the app's isolated pages, so this plain page keeps
+    // Google's answer for the app (src/auth/googleWeb.ts) and moves on within the site.
+    try { if (location.hash.length > 1) localStorage.setItem('airstrive.googleReturn', location.hash.slice(1)); } catch (e) {}
+    location.replace('/app/');
+  </script>
+</head>
+<body>
+  <main class="wrap doc"><p>Signing you in…</p></main>
+</body>
+</html>
