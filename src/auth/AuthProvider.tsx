@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { googleReturn, startGoogleSignIn } from './googleWeb';
 import { getMeta, setMeta } from '@/db/queue';
 import { removeAllPhotos } from '@/lib/files';
 import { normalizeUsername } from '@/lib/username';
@@ -30,6 +31,9 @@ interface AuthApi {
   googleAvailable: boolean;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  /** Emails a sign-in link and a 6-digit code. On the web the link signs in this browser. */
+  sendEmailCode: (email: string) => Promise<void>;
+  verifyEmailCode: (email: string, code: string) => Promise<void>;
   /** Development builds without Supabase: use the app on this phone only. */
   continueOffline: () => Promise<void>;
   claimUsername: (name: string) => Promise<'ok' | 'taken' | 'error'>;
@@ -83,6 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (__DEV__ && (await getMeta(db, 'offline_dev')) === '1') setOffline(true);
         else setStatus('signedOut');
         return;
+      }
+      if (googleReturn) {
+        // Back from Google's account picker on the web (see googleWeb.ts).
+        if (googleReturn.givenName) setSuggestedName(googleReturn.givenName);
+        const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: googleReturn.idToken, nonce: googleReturn.nonce });
+        if (error) Alert.alert("Couldn't sign in", error.message);
       }
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
@@ -146,9 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) return;
     if (Platform.OS === 'web') {
-      // Leaves the page for Google; supabase.ts picks the session up when it comes back.
-      const redirectTo = new URL(process.env.EXPO_BASE_URL || '/', window.location.origin).href.replace(/\/?$/, '/');
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+      if (clientId) {
+        await startGoogleSignIn(clientId, webRedirect());
+        return;
+      }
+      // Without a client id, go through Supabase; supabase.ts picks the session up when it comes back.
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: webRedirect() } });
       if (error) throw error;
       return;
     }
@@ -167,6 +181,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw e;
     }
   }, [googleMod]);
+
+  const sendEmailCode = useCallback(async (email: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: Platform.OS === 'web' ? { emailRedirectTo: webRedirect() } : undefined,
+    });
+    if (error) throw error;
+  }, []);
+
+  const verifyEmailCode = useCallback(async (email: string, code: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
+    if (error) throw error;
+  }, []);
 
   const continueOffline = useCallback(async () => {
     if (!__DEV__) return;
@@ -237,6 +266,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     googleAvailable: (!!googleMod || Platform.OS === 'web') && !!supabase,
     signInWithApple,
     signInWithGoogle,
+    sendEmailCode,
+    verifyEmailCode,
     continueOffline,
     claimUsername,
     finishOnboarding,
@@ -245,6 +276,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     deleteAccount,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
+}
+
+/** Where Google and email links come back to on the web: the app's own root, e.g. /app/. */
+function webRedirect(): string {
+  return new URL(process.env.EXPO_BASE_URL || '/', window.location.origin).href.replace(/\/?$/, '/');
 }
 
 /**
