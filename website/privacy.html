@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy · AirStrive</title>
+  <meta name="description" content="How AirStrive handles your account, your moments and your photos.">
+  <meta name="theme-color" content="#F5B61C">
+  <meta property="og:title" content="Privacy · AirStrive">
+  <meta property="og:description" content="How AirStrive handles your account, your moments and your photos.">
+  <meta property="og:image" content="/icon-512.png">
+  <link rel="icon" type="image/png" href="/icon-512.png">
+  <link rel="apple-touch-icon" href="/icon-512.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Fredoka:wght@600&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="36" height="36"><span>Air<b>Strive</b></span></a>
+    <a class="btn small" href="/app/">Open AirStrive</a>
+  </header>
+
+  <main class="wrap doc">
+    <h1>Privacy</h1>
+    <p class="updated">Last updated October 25, 2026</p>
+
+    <div class="summary">
+      <p><strong>In short:</strong> your moments are private. AirStrive has no ads, no trackers and no analytics, and never sells or shares your data. You can export everything or delete your account at any time from Settings.</p>
+    </div>
+
+    <h2>What we keep</h2>
+    <ul>
+      <li><strong>Your account.</strong> When you sign in with Apple or Google, we receive your email address and a sign-in identifier. If Apple or Google shares your first name, we only use it to suggest a username.</li>
+      <li><strong>Your username</strong>, which other people can see if you share a grid.</li>
+      <li><strong>Your grids and moments</strong>: which squares you have revealed and finished, and the journal text, date, place, weather and people you add to a moment.</li>
+      <li><strong>The interests you pick</strong> when you start, used only to suggest grids in the Atlas.</li>
+      <li><strong>Grids you make</strong>, and any report you send about a shared grid, so we can review it.</li>
+      <li><strong>Your photos.</strong> Photos are resized to 1600 pixels on the long edge before they leave your device. The originals stay in your photo library and are never uploaded.</li>
+    </ul>
+
+    <h2>Where it lives</h2>
+    <p>AirStrive saves everything on your device first, so it works offline. When you are signed in, it backs up your grids, moments and photos to our database and file storage, run by Supabase, so they sync between your devices. The website and the web version of the app are hosted by Vercel.</p>
+    <p>Access rules in the database itself make sure only you can read your moments and photos. A bug in the app can't show them to someone else.</p>
+
+    <h2>Who can see what</h2>
+    <ul>
+      <li>Your moments and photos are private by default.</li>
+      <li>If you share a grid you made, the grid itself (its name and squares) becomes public, along with your username.</li>
+      <li>If you turn on "Show my moments on my profile", only the grids you choose show their moments to people who follow you.</li>
+    </ul>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>No ads and no ad trackers.</li>
+      <li>No analytics or third-party tracking scripts, in the app or on this site.</li>
+      <li>We never sell or rent your data, and we don't use your moments or photos to train AI models.</li>
+    </ul>
+
+    <h2>Export and deletion</h2>
+    <p>Settings → <em>Export my data</em> gives you a zip with every moment as JSON, all your photos, and your Memory Lane scrapbook.</p>
+    <p>Settings → <em>Delete account</em> permanently deletes your account, every grid, moment and photo, on every device. Database backups that contain your data expire within 14 days.</p>
+    <p>Signing out removes your grids and photos from that device. They stay in your account until you sign in again.</p>
+
+    <h2>Children</h2>
+    <p>AirStrive is not directed at children under 13, and we don't knowingly collect their data.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, we'll update this page and the date at the top. Questions or requests: <a href="mailto:airstriveadmin@gmail.com">airstriveadmin@gmail.com</a>.</p>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>AirStrive · Moments over metrics · Free, no ads</span>
+      <nav><a href="/app/">Open the app</a><a href="/privacy">Privacy</a></nav>
+    </div>
+  </footer>
+</body>
+</html>

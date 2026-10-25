@@ -9,6 +9,9 @@ export function photoUri(path: string): string {
   return new File(Paths.document, path).uri;
 }
 
+/** The web build loads its photo store here (files.web.ts); native has nothing to load. */
+export async function loadPhotos() {}
+
 export function photosDir(): Directory {
   const dir = new Directory(Paths.document, 'photos');
   if (!dir.exists) dir.create({ intermediates: true });
@@ -39,6 +42,14 @@ export async function writeBytes(path: string, bytes: Uint8Array) {
   if (f.exists) f.delete();
   f.create();
   await f.write(bytes);
+}
+
+/** Saves the file at `url` to `path`. Used for photos synced from other devices. */
+export async function downloadTo(url: string, path: string) {
+  photosDir();
+  const dest = new File(Paths.document, path);
+  if (dest.exists) dest.delete();
+  await File.downloadFileAsync(url, dest);
 }
 
 /** Deletes every photo the app holds. Used on sign-out and account deletion. */

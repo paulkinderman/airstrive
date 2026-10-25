@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { File, Paths } from 'expo-file-system';
-import { photosDir, readBytes } from '@/lib/files';
+import { downloadTo, readBytes } from '@/lib/files';
 import type { Remote, SaveGridResult } from './engine';
 
 const BUCKET = 'photos';
@@ -33,10 +32,7 @@ export function supabaseRemote(client: SupabaseClient): Remote {
     async downloadPhoto(storagePath, localPath) {
       const { data, error } = await client.storage.from(BUCKET).createSignedUrl(storagePath, 300);
       if (error || !data) throw new Error(`download: ${error?.message}`);
-      photosDir();
-      const dest = new File(Paths.document, localPath);
-      if (dest.exists) dest.delete();
-      await File.downloadFileAsync(data.signedUrl, dest);
+      await downloadTo(data.signedUrl, localPath);
     },
     async removePhotos(paths) {
       await client.storage.from(BUCKET).remove(paths);

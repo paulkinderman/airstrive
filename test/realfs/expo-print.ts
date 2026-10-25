@@ -8,3 +8,5 @@ export async function printToFileAsync(opts: { html: string; width?: number; hei
   fs.writeFileSync(file, opts.html);
   return { uri: `file://${file}`, numberOfPages: 1 };
 }
+
+export async function printAsync(_opts: { html: string }) {}

@@ -1,5 +1,5 @@
 import 'expo-sqlite/localStorage/install';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -9,7 +9,11 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 export const supabase: SupabaseClient | null =
   url && anonKey
     ? createClient(url, anonKey, {
-        auth: { storage: localStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+        // The web build signs in by redirecting to Google and back, so it reads the session from the URL.
+        auth: {
+          storage: localStorage, autoRefreshToken: true, persistSession: true,
+          detectSessionInUrl: Platform.OS === 'web', flowType: Platform.OS === 'web' ? 'pkce' : 'implicit',
+        },
       })
     : null;
 

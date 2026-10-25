@@ -13,8 +13,8 @@ const FADE_MS = 1400;
  * each tile starts at a different point in the cycle so the board shimmers rather than flips.
  */
 export function Tile({
-  square, size, color, selected, onPress,
-}: { square: BoardSquare; size: number; color: string; selected: boolean; onPress: () => void }) {
+  square, size, color, selected, onPress, onHover,
+}: { square: BoardSquare; size: number; color: string; selected: boolean; onPress: () => void; onHover?: (on: boolean) => void }) {
   const uris = square.photoUris;
   const multi = uris.length > 1;
   const [front, setFront] = useState(0);
@@ -51,10 +51,11 @@ export function Tile({
     accessibilityState: { selected },
   };
   const ring = selected ? { borderWidth: 3, borderColor: colors.ink } : null;
+  const hover = onHover ? { onHoverIn: () => onHover(true), onHoverOut: () => onHover(false) } : null;
 
   if (square.state === 'done' && uris.length > 0) {
     return (
-      <Pressable {...a11y} onPress={onPress} style={[{ width: size, height: size, borderRadius: radius, overflow: 'hidden' }, ring]}>
+      <Pressable {...a11y} onPress={onPress} {...hover} style={[{ width: size, height: size, borderRadius: radius, overflow: 'hidden' }, ring]}>
         <Image source={{ uri: uris[back] ?? uris[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
           <Image source={{ uri: uris[front] }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -68,6 +69,7 @@ export function Tile({
     <Pressable
       {...a11y}
       onPress={onPress}
+      {...hover}
       style={[
         { width: size, height: size, borderRadius: radius, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' },
         square.state === 'revealed' && { borderWidth: 1.5, borderColor: colors.lineStrong },

@@ -13,12 +13,18 @@ import { Text } from '@/ui/Text';
 import { Tile } from '@/ui/Tile';
 import { Button } from '@/ui/Button';
 import { Menu, type MenuItem } from '@/ui/Menu';
+import { useWideLayout } from '@/ui/wide';
+import { WideGrid } from '@/wide/WideGrid';
 import { colors, radius } from '@/theme';
 
 type Board = NonNullable<Awaited<ReturnType<typeof loadBoard>>>;
 
 export default function GridScreen() {
   const { id, select } = useLocalSearchParams<{ id: string; select?: string }>();
+  return useWideLayout() ? <WideGrid id={id} select={select} /> : <PhoneGrid id={id} select={select} />;
+}
+
+function PhoneGrid({ id, select }: { id: string; select?: string }) {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();

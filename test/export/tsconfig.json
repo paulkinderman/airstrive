@@ -5,7 +5,8 @@
       "@/*": ["../../src/*"],
       "expo-crypto": ["../stubs/expo-crypto.ts"],
       "expo-file-system": ["../realfs/expo-file-system.ts"],
-      "expo-print": ["../realfs/expo-print.ts"]
+      "expo-print": ["../realfs/expo-print.ts"],
+      "expo-sharing": ["../realfs/expo-sharing.ts"]
     }
   },
   "include": ["./**/*.ts", "../realfs/*.ts"],
