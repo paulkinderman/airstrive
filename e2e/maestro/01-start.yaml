@@ -17,6 +17,8 @@ appId: app.airstrive.mobile
     visible: "What are you into?"
     timeout: 20000
 - tapOn: "Running"
+- scrollUntilVisible:
+    element: "Seasons and holidays"
 - tapOn: "Seasons and holidays"
 - tapOn: "Show me grids"
 - assertVisible: "Picked for you"

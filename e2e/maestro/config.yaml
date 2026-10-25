@@ -1,9 +1,10 @@
 # Maestro runs these in order on an Android emulator (see .github/workflows/e2e.yml).
-flows:
-  - 01-start.yaml
-  - 02-log-a-moment.yaml
-  - 03-memory-lane.yaml
-  - 04-edit-and-remove.yaml
-  - 05-freebie.yaml
+# Each flow picks up where the one before left off.
 executionOrder:
   continueOnFailure: false
+  flowsOrder:
+    - 01-start
+    - 02-log-a-moment
+    - 03-memory-lane
+    - 04-edit-and-remove
+    - 05-freebie
