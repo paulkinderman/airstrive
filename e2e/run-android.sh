@@ -18,4 +18,11 @@ adb reverse tcp:8081 tcp:8081
 # Build the bundle once before the app asks, so the first screen doesn't time out.
 curl -sf "http://localhost:8081/node_modules/expo-router/entry.bundle?platform=android&dev=true&minify=false" -o /dev/null || true
 
-"$HOME/.maestro/bin/maestro" test e2e/maestro --format junit --output "$out/report.xml" --test-output-dir "$out"
+maestro="$HOME/.maestro/bin/maestro"
+if ! "$maestro" test e2e/maestro --format junit --output "$out/report.xml" --test-output-dir "$out"; then
+  # Print what was on screen when it stopped, so a failure can be read from the log alone.
+  echo "::group::Screen at failure"
+  "$maestro" hierarchy 2>/dev/null | grep -oE '"(text|accessibilityText|resource-id)" *: *"[^"]+"' | head -150 || true
+  echo "::endgroup::"
+  exit 1
+fi

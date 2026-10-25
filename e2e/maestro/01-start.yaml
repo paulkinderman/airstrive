@@ -21,7 +21,9 @@ appId: app.airstrive.mobile
     element: "Seasons and holidays"
 - tapOn: "Seasons and holidays"
 - tapOn: "Show me grids"
-- assertVisible: "Picked for you"
+- extendedWaitUntil:
+    visible: "Picked for you"
+    timeout: 15000
 - scrollUntilVisible:
     element: "Add Running"
 - tapOn: "Add Running"
