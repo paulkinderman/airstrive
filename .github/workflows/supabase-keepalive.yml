@@ -1,0 +1,24 @@
+name: Supabase keep-alive
+
+# Free Supabase projects pause after 7 days without activity.
+# One small read a day keeps dev and prod awake.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [dev, production]
+    environment: ${{ matrix.target }}
+    steps:
+      - name: Query the database through the REST API
+        if: vars.SUPABASE_URL != ''
+        run: |
+          curl -fsS -o /dev/null \
+            -H "apikey: ${{ vars.SUPABASE_ANON_KEY }}" \
+            "${{ vars.SUPABASE_URL }}/rest/v1/grids?select=id&limit=1"

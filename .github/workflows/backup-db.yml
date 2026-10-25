@@ -1,0 +1,34 @@
+name: Back up production database
+
+# The Supabase free plan has no backups. This keeps a nightly dump of the
+# production database as a private workflow artifact for 14 days.
+# Photos in Storage are not included.
+on:
+  schedule:
+    - cron: '43 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - if: vars.SUPABASE_PROJECT_REF != ''
+        run: |
+          supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+          supabase db dump -f schema.sql
+          supabase db dump --data-only --use-copy -f data.sql
+          gzip schema.sql data.sql
+      - if: vars.SUPABASE_PROJECT_REF != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: airstrive-prod-${{ github.run_id }}
+          path: '*.sql.gz'
+          retention-days: 14
