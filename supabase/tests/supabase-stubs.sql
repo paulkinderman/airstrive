@@ -18,3 +18,6 @@ create function storage.foldername(name text) returns text[] language sql immuta
 grant usage on schema public, auth, storage to authenticated;
 grant select, insert, update, delete on storage.objects to authenticated;
 grant execute on function auth.uid() to authenticated;
+-- Supabase grants everything on new public tables to anon and authenticated by default.
+-- Mirror that so the tests catch a table that relies on its column grants alone.
+alter default privileges in schema public grant all on tables to anon, authenticated;
