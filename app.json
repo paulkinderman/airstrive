@@ -1,17 +1,28 @@
 {
   "expo": {
-    "name": "airstrive",
+    "name": "AirStrive",
     "slug": "airstrive",
-    "version": "1.0.0",
+    "version": "0.1.0",
+    "scheme": "airstrive",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#F5B61C"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "app.airstrive.mobile",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "AirStrive uses your photos to keep the moments you log.",
+        "NSCameraUsageDescription": "AirStrive uses the camera to capture a moment as it happens."
+      }
     },
     "android": {
+      "package": "app.airstrive.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F5B61C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -19,7 +30,23 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AirStrive uses your photos to keep the moments you log.",
+          "cameraPermission": "AirStrive uses the camera to capture a moment as it happens."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
