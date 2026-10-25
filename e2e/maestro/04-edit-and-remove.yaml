@@ -1,0 +1,33 @@
+appId: app.airstrive.mobile
+---
+- scrollUntilVisible:
+    element: "Fall"
+- tapOn: "Fall"
+- tapOn:
+    id: "square-20"
+- tapOn: "Edit"
+- assertVisible: "Caught a leaf before it hit the ground"
+- tapOn: "Caught a leaf before it hit the ground"
+- inputText: " and kept it"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Save changes"
+- tapOn: "Save changes"
+- extendedWaitUntil:
+    visible: "Square 21, .*, done"
+    timeout: 10000
+# Removing the moment unchecks the square; squares it revealed stay revealed.
+- tapOn:
+    id: "square-20"
+- tapOn: "Edit"
+- assertVisible: ".*and kept it.*"
+- scrollUntilVisible:
+    element: "Remove this moment and uncheck the square"
+- tapOn: "Remove this moment and uncheck the square"
+- assertVisible: "Remove this moment?"
+- tapOn: "(?i)remove"
+- extendedWaitUntil:
+    visible: "Square 21, .*, revealed"
+    timeout: 10000
+- assertVisible: "Square 15, .*, revealed"
+- assertVisible: "Square 20, .*, revealed"

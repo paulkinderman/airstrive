@@ -1,0 +1,28 @@
+# Fall is Small (6×8): squares 21, 22, 27 and 28 (indexes 20, 21, 26, 27) start revealed.
+appId: app.airstrive.mobile
+---
+- scrollUntilVisible:
+    element: "Fall"
+- tapOn: "Fall"
+- assertVisible: "Square 21, .*, revealed"
+- assertVisible: "Square 15, hidden"
+- tapOn:
+    id: "square-20"
+- tapOn: "I did this"
+- tapOn: "A sentence or a whole page. Future you will read this."
+- inputText: "Caught a leaf before it hit the ground"
+- hideKeyboard
+- tapOn: "Where"
+- inputText: "Prospect Park"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Save to grid"
+- tapOn: "Save to grid"
+# Back on the board: the square is done and its neighbours above and to the left opened up.
+- extendedWaitUntil:
+    visible: "Square 21, .*, done"
+    timeout: 10000
+- assertVisible: "Square 15, .*, revealed"
+- assertVisible: "Square 20, .*, revealed"
+- assertVisible: "Square 14, hidden"
+- takeScreenshot: 02-board

@@ -1,0 +1,26 @@
+appId: app.airstrive.mobile
+---
+- tapOn:
+    id: "square-21"
+- tapOn: "Freebie"
+- assertVisible: "Use a freebie?"
+- tapOn: "(?i)use it"
+- extendedWaitUntil:
+    visible: "Square 22, .*, done"
+    timeout: 10000
+- assertVisible: "Square 16, .*, revealed"
+- assertVisible: "Square 23, .*, revealed"
+# Small grids have two freebies; spend the second, then there are none.
+- tapOn:
+    id: "square-26"
+- tapOn: "Freebie"
+- tapOn: "(?i)use it"
+- extendedWaitUntil:
+    visible: "Square 27, .*, done"
+    timeout: 10000
+- tapOn:
+    id: "square-27"
+- assertVisible:
+    text: "Freebie"
+    enabled: false
+- takeScreenshot: 05-freebies

@@ -15,6 +15,7 @@ GoogleService-Info.plist
 *.p8
 *.jks
 *.keystore
+e2e/out/
 dist-site/
 
 # admin/ (Next.js moderation site)

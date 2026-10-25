@@ -1,0 +1,14 @@
+appId: app.airstrive.mobile
+---
+- back
+- tapOn: "Memory Lane"
+- assertVisible: "Index"
+# The page title is the square's prompt (Fall, index 20).
+- tapOn: "Make a fall playlist"
+- extendedWaitUntil:
+    visible: "Caught a leaf before it hit the ground"
+    timeout: 10000
+- assertVisible: ".*Prospect Park.*"
+- takeScreenshot: 03-page
+- back
+- tapOn: "Grids"

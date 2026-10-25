@@ -1,0 +1,42 @@
+# A fresh install, using the dev-only "this phone only" mode so no Apple or Google login is needed.
+appId: app.airstrive.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Moments over metrics."
+    timeout: 120000
+- tapOn: "Continue on this phone only (dev)"
+- assertVisible: "What should we call you?"
+- tapOn: "paulk"
+- inputText: "Maestro"
+- hideKeyboard
+- tapOn: "That's me"
+# Onboarding: pick interests, then the two grids the later flows use.
+- extendedWaitUntil:
+    visible: "What are you into?"
+    timeout: 20000
+- tapOn: "Running"
+- scrollUntilVisible:
+    element: "Seasons and holidays"
+- tapOn: "Seasons and holidays"
+- tapOn: "Show me grids"
+- extendedWaitUntil:
+    visible: "Picked for you"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Add Running"
+- tapOn: "Add Running"
+- scrollUntilVisible:
+    element: "Add Fall"
+- tapOn: "Add Fall"
+- scrollUntilVisible:
+    element: "Add 2 grids to my shelf"
+- tapOn: "Add 2 grids to my shelf"
+- extendedWaitUntil:
+    visible: "Your grids"
+    timeout: 20000
+- assertVisible: "Fall"
+- assertVisible: "Running"
+- assertVisible: ".*Maestro.*"
+- takeScreenshot: 01-home
