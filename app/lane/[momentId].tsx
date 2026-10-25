@@ -5,7 +5,9 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { getMoment, listMoments, type Moment } from '@/db/repo';
+import { getMoment, listPages, type Moment, type Page } from '@/db/repo';
+import { PageLink, openPage } from '@/ui/PageLink';
+import { useDataVersion } from '@/sync/events';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { colors, fonts } from '@/theme';
@@ -17,18 +19,19 @@ export default function ScrapbookPage() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [m, setM] = useState<Moment | null>(null);
-  const [nav, setNav] = useState<{ page: number; prev: Moment | null; next: Moment | null }>({ page: 0, prev: null, next: null });
+  const [nav, setNav] = useState<{ page: number; prev: Page | null; next: Page | null }>({ page: 0, prev: null, next: null });
+  const version = useDataVersion();
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [moment, all] = await Promise.all([getMoment(db, momentId), listMoments(db)]);
+        const [moment, all] = await Promise.all([getMoment(db, momentId), listPages(db)]);
         if (!moment) { router.back(); return; }
         setM(moment);
-        const i = all.findIndex((x) => x.id === momentId); // newest first
+        const i = all.findIndex((x) => x.key === momentId); // newest first
         setNav({ page: all.length - i, prev: all[i + 1] ?? null, next: all[i - 1] ?? null });
       })();
-    }, [db, momentId, router]),
+    }, [db, momentId, router, version]),
   );
 
   if (!m) return <View style={{ flex: 1, backgroundColor: colors.scrap }} />;
@@ -101,26 +104,10 @@ export default function ScrapbookPage() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <PageLink moment={nav.prev} dir="prev" onPress={(id) => router.replace({ pathname: '/lane/[momentId]', params: { momentId: id } })} />
-        <PageLink moment={nav.next} dir="next" onPress={(id) => router.replace({ pathname: '/lane/[momentId]', params: { momentId: id } })} />
+        <PageLink page={nav.prev} dir="prev" onPress={(p) => openPage(router, p)} />
+        <PageLink page={nav.next} dir="next" onPress={(p) => openPage(router, p)} />
       </View>
     </View>
-  );
-}
-
-function PageLink({ moment, dir, onPress }: { moment: Moment | null; dir: 'prev' | 'next'; onPress: (id: string) => void }) {
-  if (!moment) {
-    return (
-      <Text variant="bodyBold" style={{ fontSize: 13, color: '#C9BDA8' }}>{dir === 'prev' ? 'First page' : 'Newest'}</Text>
-    );
-  }
-  return (
-    <Pressable onPress={() => onPress(moment.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, maxWidth: '48%' }}>
-      {dir === 'prev' && <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.scrapInk} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>}
-      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: moment.gridColor }} />
-      <Text variant="bodyBold" numberOfLines={1} style={{ fontSize: 13, color: colors.scrapInk, flexShrink: 1 }}>{moment.title}</Text>
-      {dir === 'next' && <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.scrapInk} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 5l7 7-7 7" /></Svg>}
-    </Pressable>
   );
 }
 

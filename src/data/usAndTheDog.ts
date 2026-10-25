@@ -1,0 +1,90 @@
+import type { StarterGrid } from './types';
+
+export const usAndTheDog: StarterGrid = {
+  id: 'grid_us_and_the_dog',
+  title: 'Us and the dog',
+  color: '#F0634A',
+  theme: 'Family',
+  size: 'small',
+  description: 'Family time for two people and a dog. Everything here is for all three of you.',
+  clusters: [
+    {
+      name: 'With the dog',
+      prompts: [
+        'Let the dog pick the route',
+        'Teach the dog one new trick',
+        'Bath day, together',
+        'Take the dog to a park it has never seen',
+        'Let the dog sleep on the bed one night',
+        'Dinner on a dog-friendly patio',
+        'Watch the dog dream',
+        'Make the dog a birthday treat',
+      ],
+    },
+    {
+      name: 'Walks',
+      prompts: [
+        'A sunrise walk, all three of you',
+        'A walk in the rain',
+        'A walk with no phones',
+        'The longest walk you have ever done together',
+        'A walk to get coffee and nothing else',
+        'The same route in every season',
+        'A walk in the snow',
+        'A night walk under a full moon',
+      ],
+    },
+    {
+      name: 'Home',
+      prompts: [
+        'Cook together with the music up',
+        'A board game with phones in a drawer',
+        'Build a blanket fort, dog included',
+        'Breakfast in bed',
+        'Movie night with a theme',
+        'Fix something together',
+        'Rearrange a room',
+        'A Sunday with no chores',
+      ],
+    },
+    {
+      name: 'Out together',
+      prompts: [
+        'Visit a town none of you have been to',
+        'A farmers market morning',
+        'Take a class together',
+        'A drive with no destination',
+        'A picnic',
+        'Dinner somewhere you dressed up for',
+        'Watch the sunset from somewhere new',
+        'An afternoon at a dog-friendly brewery',
+      ],
+    },
+    {
+      name: 'Rituals',
+      prompts: [
+        'Friday night pizza',
+        'Sunday morning pancakes',
+        'A yearly photo in the same spot',
+        "Plan the year on New Year's Day",
+        'Anniversary walk on the route from year one',
+        'The same recipe every fall',
+        'Write each other a note once a month',
+        'Grow one thing from seed',
+      ],
+    },
+    {
+      name: 'Tiny adventures',
+      prompts: [
+        'Camp in the backyard or the living room',
+        'Watch a meteor shower',
+        'A cabin weekend with the dog',
+        'Go to a drive-in',
+        'Take the train somewhere for lunch',
+        'Hike to a view and eat up there',
+        'Get lost in a new neighborhood',
+        'A whole day with no plan at all',
+      ],
+    },
+  ],
+};

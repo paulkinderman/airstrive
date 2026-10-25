@@ -4,7 +4,9 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { loadBoard, useFreebie, type BoardSquare } from '@/db/repo';
+import { loadBoard, spendFreebie, type BoardSquare } from '@/db/repo';
+import { useSync } from '@/sync/SyncProvider';
+import { useDataVersion } from '@/sync/events';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Tile } from '@/ui/Tile';
@@ -21,6 +23,8 @@ export default function GridScreen() {
   const { width } = useWindowDimensions();
   const [board, setBoard] = useState<Board | null>(null);
   const [selected, setSelected] = useState<string | null>(select ?? null);
+  const sync = useSync();
+  const version = useDataVersion();
 
   const reload = useCallback(async () => {
     const b = await loadBoard(db, id);
@@ -29,7 +33,7 @@ export default function GridScreen() {
       const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
       setSelected(first?.squareStateId ?? null);
     }
-  }, [db, id, selected]);
+  }, [db, id, selected, version]);
 
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
@@ -45,7 +49,15 @@ export default function GridScreen() {
     if (board.freebiesLeft < 1) { Alert.alert('No freebies left', 'This grid has used all of its freebies.'); return; }
     Alert.alert('Use a freebie?', `This marks "${s.prompt}" done without a moment and reveals its neighbors.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Use it', onPress: async () => { await useFreebie(db, s.squareStateId); reload(); } },
+      {
+        text: 'Use it',
+        onPress: async () => {
+          const r = await spendFreebie(db, s.squareStateId);
+          sync.request();
+          if (r?.completedGrid) router.push({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: r.completedGrid } });
+          else reload();
+        },
+      },
     ]);
   };
 
@@ -57,7 +69,15 @@ export default function GridScreen() {
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           </Pressable>
           <Text variant="label">Grid</Text>
-          <View style={styles.iconButton} />
+          {board.completedAt ? (
+            <Pressable onPress={() => router.push({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: id } })} style={styles.iconButton} accessibilityLabel="Chapter cover">
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" /><Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
+              </Svg>
+            </Pressable>
+          ) : (
+            <View style={styles.iconButton} />
+          )}
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 4 }}>

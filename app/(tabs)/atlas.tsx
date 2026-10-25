@@ -8,7 +8,9 @@ export default function Atlas() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + 16, paddingHorizontal: 20, gap: 8 }}>
       <Text variant="display">Atlas</Text>
-      <Text variant="body" style={{ color: colors.muted }}>Browsing and making grids arrives in v2. For now, Running is on your shelf.</Text>
+      <Text variant="body" style={{ color: colors.muted }}>
+        Browsing, adopting and making grids arrives in the next update. For now, all six starter grids are on your shelf.
+      </Text>
     </View>
   );
 }

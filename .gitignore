@@ -5,6 +5,9 @@ dist/
 .DS_Store
 ios/
 android/
+.env
+.env.*
+!.env.example
 
 .env*.local
 google-services.json

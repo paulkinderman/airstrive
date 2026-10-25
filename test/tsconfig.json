@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@/*": [
+        "../src/*"
+      ],
+      "expo-crypto": [
+        "./stubs/expo-crypto.ts"
+      ],
+      "expo-file-system": [
+        "./stubs/expo-file-system.ts"
+      ]
+    },
+    "types": [
+      "node"
+    ],
+    "jsx": "react-jsx"
+  },
+  "extends": "../tsconfig.json",
+  "include": [
+    "./**/*.ts",
+    "../scripts/**/*.ts"
+  ],
+  "exclude": []
+}

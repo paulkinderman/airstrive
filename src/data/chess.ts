@@ -1,0 +1,90 @@
+import type { StarterGrid } from './types';
+
+export const chess: StarterGrid = {
+  id: 'grid_chess',
+  title: 'Chess',
+  color: '#3B9BE0',
+  theme: 'Games',
+  size: 'small',
+  description: 'For people who play, badly or well, and want more of it in their life. Nothing here needs a rating.',
+  clusters: [
+    {
+      name: 'Play',
+      prompts: [
+        'Play a game with no clock',
+        'Play a game in under three minutes',
+        'Play blindfolded for ten moves',
+        'Play one correspondence game over a week',
+        'Play with a handicap: give up a rook',
+        'Play the same opening ten games in a row',
+        'Narrate every move out loud',
+        'Play a game on a board you drew yourself',
+      ],
+    },
+    {
+      name: 'People',
+      prompts: [
+        'Play a stranger',
+        'Play someone three generations apart',
+        'Play a child and let them win',
+        'Play a child and do not',
+        'Play a parent',
+        'Play a friend who has never played',
+        'Teach someone the moves',
+        'Play someone who beats you without trying',
+      ],
+    },
+    {
+      name: 'Places',
+      prompts: [
+        'Play in a park',
+        'Play at a bar',
+        'Play on a train',
+        'Play on a beach',
+        'Play at a chess club, once',
+        'Play in a café for a whole afternoon',
+        'Play in a library',
+        'Play on a giant outdoor set',
+      ],
+    },
+    {
+      name: 'Learn',
+      prompts: [
+        'Learn a new opening by name',
+        'Learn one endgame cold: king and pawn',
+        'Study a famous game move by move',
+        'Solve a puzzle every day for a week',
+        'Watch a tournament game live',
+        'Read a chess book cover to cover',
+        'Learn to mate with bishop and knight',
+        'Annotate one of your own games',
+      ],
+    },
+    {
+      name: 'Lose well',
+      prompts: [
+        'Lose gracefully and shake hands',
+        'Lose in under ten moves and laugh',
+        'Resign a game you could have dragged out',
+        'Lose to someone you taught',
+        'Replay a loss and find the moment it turned',
+        'Lose three in a row and play a fourth',
+        'Get checkmated by a kid',
+        'Say good game and mean it',
+      ],
+    },
+    {
+      name: 'Rituals',
+      prompts: [
+        'Play on your birthday',
+        "Play a New Year's Day game",
+        'Keep a scoresheet by hand',
+        'Play with a set you inherited or found',
+        'Play on a rainy afternoon',
+        'Play by candlelight',
+        'Play a game at sunrise',
+        'Finish a game you started a year ago',
+      ],
+    },
+  ],
+};

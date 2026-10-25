@@ -7,6 +7,9 @@ import Svg, { Path } from 'react-native-svg';
 import { listShelf, listSuggestions, type ShelfGrid, type Suggestion } from '@/db/repo';
 import { Text } from '@/ui/Text';
 import { MiniGrid } from '@/ui/MiniGrid';
+import { useAuth } from '@/auth/AuthProvider';
+import { useSync } from '@/sync/SyncProvider';
+import { useDataVersion } from '@/sync/events';
 import { colors, radius } from '@/theme';
 
 function greeting() {
@@ -20,6 +23,9 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [shelf, setShelf] = useState<ShelfGrid[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const { username } = useAuth();
+  const sync = useSync();
+  const version = useDataVersion();
 
   useFocusEffect(
     useCallback(() => {
@@ -29,7 +35,7 @@ export default function Home() {
         if (live) { setShelf(s); setSuggestions(sug); }
       })();
       return () => { live = false; };
-    }, [db]),
+    }, [db, version]),
   );
 
   const waiting = shelf.reduce((n, g) => n + g.revealed, 0);
@@ -44,16 +50,22 @@ export default function Home() {
             Air<Text variant="title" style={{ fontSize: 24, color: colors.accent }}>Strive</Text>
           </Text>
         </View>
-        <Pressable onPress={() => router.push('/lane')} style={styles.roundButton} accessibilityLabel="Memory Lane">
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" />
-            <Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
-          </Svg>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Pressable onPress={() => router.push('/lane')} style={styles.roundButton} accessibilityLabel="Memory Lane">
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" />
+              <Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
+            </Svg>
+          </Pressable>
+          <Pressable onPress={() => router.push('/settings')} style={[styles.roundButton, styles.avatar]} accessibilityLabel="Settings">
+            <Text variant="title" style={{ fontSize: 18, color: '#fff' }}>{(username ?? '?').slice(0, 1).toUpperCase()}</Text>
+            {sync.failed > 0 && <View style={styles.badge} />}
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 4 }}>
-        <Text variant="display" style={{ fontSize: 30, lineHeight: 34 }}>{greeting()}</Text>
+        <Text variant="display" style={{ fontSize: 30, lineHeight: 34 }}>{greeting()}{username ? `, ${username}` : ''}</Text>
         <Text variant="body" style={{ color: colors.muted }}>{day} · {waiting} square{waiting === 1 ? '' : 's'} waiting</Text>
       </View>
 
@@ -62,11 +74,10 @@ export default function Home() {
           <Text variant="label" style={{ paddingHorizontal: 20 }}>Things to try</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
             {suggestions.map((s) => {
-              const grid = shelf.find((g) => g.title === s.gridTitle);
               return (
                 <Pressable
                   key={s.squareStateId}
-                  onPress={() => grid && router.push({ pathname: '/grid/[id]', params: { id: grid.userGridId, select: s.squareStateId } })}
+                  onPress={() => router.push({ pathname: '/grid/[id]', params: { id: s.userGridId, select: s.squareStateId } })}
                   style={styles.suggestion}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -111,5 +122,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   suggestion: { width: 170, minHeight: 118, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, gap: 10 },
+  avatar: { backgroundColor: colors.ink, borderColor: colors.ink },
+  badge: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.paper },
   gridCard: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, minHeight: 84 },
 });
