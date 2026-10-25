@@ -10,6 +10,10 @@ import { colors } from '@/theme';
  *    the board and photos from the window width, so the window reports the column's width.
  *    Screens with a wide layout (src/ui/wide.web.ts) lift the column while they're in front.
  * 3. On the deployed site, Vercel Web Analytics counts page views (cookieless, see the privacy page).
+ * 4. SQLite's worker holds the database files open exclusively. When the page is left (to sign in
+ *    with Google, say), Safari can keep it alive in its back-forward cache, and the next load of
+ *    the app then waits forever for those files. So the worker stops when the page is hidden, and
+ *    a page restored from that cache reloads.
  */
 
 const COLUMN = 480;
@@ -113,12 +117,30 @@ function narrowWindow() {
   };
 }
 
+function releaseDatabaseOnLeave() {
+  const workers: Worker[] = [];
+  const NativeWorker = window.Worker;
+  window.Worker = class extends NativeWorker {
+    constructor(url: string | URL, options?: WorkerOptions) {
+      super(url, options);
+      workers.push(this);
+    }
+  };
+  window.addEventListener('pagehide', () => {
+    for (const w of workers.splice(0)) w.terminate();
+  });
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) window.location.reload();
+  });
+}
+
 if (typeof document !== 'undefined') {
   narrowWindow();
   const style = document.createElement('style');
   style.textContent = css;
   document.head.appendChild(style);
   Alert.alert = showAlert;
+  releaseDatabaseOnLeave();
   if (!__DEV__) {
     const analytics = document.createElement('script');
     analytics.defer = true;
