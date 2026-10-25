@@ -10,3 +10,4 @@ run() { psql -q -v ON_ERROR_STOP=1 -U postgres -d "$db" -f "$1"; }
 run "$here/supabase-stubs.sql"
 for f in "$here"/../migrations/*.sql; do run "$f"; done
 run "$here/rls_and_sync.sql"
+run "$here/atlas.sql"

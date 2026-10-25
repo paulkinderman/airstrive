@@ -8,7 +8,7 @@ import { nowIso } from '@/lib/ids';
  * between it and the server and never blocks the UI.
  *
  *  1. upload photo files that have no storage path yet
- *  2. push dirty rows, parents before children, a batch per table
+ *  2. push grids the person made, then dirty rows, parents before children, a batch per table
  *  3. pull rows changed on the server since the last pull, per table
  *  4. download photo files this phone doesn't have
  *
@@ -32,7 +32,12 @@ export interface Remote {
   uploadPhoto(storagePath: string, localPath: string, contentType: string): Promise<void>;
   downloadPhoto(storagePath: string, localPath: string): Promise<void>;
   removePhotos(storagePaths: string[]): Promise<void>;
+  /** Creates or updates a grid the person made. Squares are only used when it is created. */
+  saveGrid(grid: Row, squares: Row[]): Promise<SaveGridResult>;
+  saveProfile(profile: { interests: string[]; onboarded_at: string | null }): Promise<void>;
 }
+
+export type SaveGridResult = 'saved' | 'stale' | 'sharing_suspended';
 
 export interface LocalFiles {
   exists(path: string): boolean;
@@ -105,9 +110,44 @@ async function scheduleRetry(db: SQLiteDatabase, ids: number[], error: string) {
   }
 }
 
+const GRID_COLUMNS = ['id', 'title', 'color', 'theme', 'size', 'description', 'is_public', 'updated_at'];
+
+/** Grids the person made, one call each. A grid that won't save doesn't hold up the rest. */
+async function pushGrids(db: SQLiteDatabase, remote: Remote, now: string): Promise<PushResult> {
+  const queued = await db.getAllAsync<{ id: number; row_id: string; dirty_at: string }>(
+    `SELECT id, row_id, dirty_at FROM sync_queue
+     WHERE tbl = 'grids' AND failed = 0 AND (next_attempt_at IS NULL OR next_attempt_at <= ?) ORDER BY id`, now,
+  );
+  let pushed = 0;
+  let error: string | undefined;
+  for (const q of queued) {
+    const grid = await db.getFirstAsync<Row>('SELECT * FROM grids WHERE id = ?', q.row_id);
+    if (!grid) { await db.runAsync('DELETE FROM sync_queue WHERE id = ?', q.id); continue; }
+    const squares = await db.getAllAsync<Row>('SELECT idx, prompt, cluster FROM grid_squares WHERE grid_id = ? ORDER BY idx', q.row_id);
+    const out: Row = {};
+    for (const c of GRID_COLUMNS) out[c] = c === 'is_public' ? grid[c] === 1 : grid[c];
+    let result: SaveGridResult;
+    try {
+      result = await remote.saveGrid(out, squares);
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+      await scheduleRetry(db, [q.id], error);
+      continue;
+    }
+    if (result === 'sharing_suspended') {
+      await db.runAsync('UPDATE grids SET is_public = 0 WHERE id = ?', q.row_id);
+      await setMeta(db, 'sharing_suspended', '1');
+    }
+    await db.runAsync('DELETE FROM sync_queue WHERE id = ? AND dirty_at = ?', q.id, q.dirty_at);
+    pushed++;
+  }
+  return { pushed, failed: !!error, error };
+}
+
 export async function push(db: SQLiteDatabase, remote: Remote): Promise<PushResult> {
   const now = nowIso();
-  let pushed = 0;
+  const grids = await pushGrids(db, remote, now);
+  let pushed = grids.pushed;
   for (const table of SYNCED_TABLES) {
     for (;;) {
       const queued = await db.getAllAsync<{ id: number; row_id: string; dirty_at: string }>(
@@ -149,7 +189,7 @@ export async function push(db: SQLiteDatabase, remote: Remote): Promise<PushResu
       if (queued.length < BATCH) break;
     }
   }
-  return { pushed, failed: false };
+  return { pushed, failed: grids.failed, error: grids.error };
 }
 
 // ---------- pull ----------
@@ -158,7 +198,8 @@ async function hasPending(db: SQLiteDatabase, table: SyncedTable, id: string) {
   return !!(await db.getFirstAsync('SELECT 1 AS x FROM sync_queue WHERE tbl = ? AND row_id = ?', table, id));
 }
 
-async function ensureGrids(db: SQLiteDatabase, remote: Remote, gridIds: string[]) {
+/** Copies grid templates this phone doesn't have yet from the server. */
+export async function ensureGrids(db: SQLiteDatabase, remote: Remote, gridIds: string[]) {
   const missing: string[] = [];
   for (const id of new Set(gridIds)) {
     if (!(await db.getFirstAsync('SELECT 1 AS x FROM grids WHERE id = ?', id))) missing.push(id);
@@ -167,10 +208,11 @@ async function ensureGrids(db: SQLiteDatabase, remote: Remote, gridIds: string[]
   for (const t of await remote.fetchGrids(missing)) {
     const g = t.grid;
     await db.runAsync(
-      `INSERT OR REPLACE INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, is_official, author_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       g.id as string, g.title as string, g.color as string, g.theme as string, g.size as string, g.cols as number, g.rows as number,
-      (g.description as string) ?? '', (g.made_by as string) ?? '', g.is_public ? 1 : 0, normalizeTs(g.updated_at) ?? nowIso(),
+      (g.description as string) ?? '', (g.made_by as string) ?? '', g.is_public ? 1 : 0, g.is_official ? 1 : 0,
+      (g.author_id as string) ?? null, normalizeTs(g.updated_at) ?? nowIso(),
     );
     for (const s of t.squares) {
       await db.runAsync(
@@ -340,6 +382,14 @@ export async function backfill(db: SQLiteDatabase) {
   }
 }
 
+/** Interests from onboarding, saved on the phone first and sent when there is a connection. */
+async function pushProfile(db: SQLiteDatabase, remote: Remote) {
+  if ((await getMeta(db, 'profile_dirty')) !== '1') return;
+  const interests = JSON.parse((await getMeta(db, 'interests')) ?? '[]') as string[];
+  await remote.saveProfile({ interests, onboarded_at: await getMeta(db, 'onboarded_at') });
+  await setMeta(db, 'profile_dirty', null);
+}
+
 export interface SyncResult { pushed: number; pulled: number; uploaded: number; downloaded: number; error?: string }
 
 export async function syncOnce(db: SQLiteDatabase, remote: Remote, files: LocalFiles, userId: string): Promise<SyncResult> {
@@ -347,6 +397,11 @@ export async function syncOnce(db: SQLiteDatabase, remote: Remote, files: LocalF
   let error: string | undefined;
   try {
     uploaded = await uploadPhotos(db, remote, files, userId);
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
+  try {
+    await pushProfile(db, remote);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -377,11 +432,13 @@ export async function retryFailed(db: SQLiteDatabase) {
   await db.runAsync('UPDATE sync_queue SET failed = 0, attempts = 0, next_attempt_at = NULL, first_failed_at = NULL');
 }
 
-/** Empties every personal table. Grid templates stay. Used on sign-out and account deletion. */
+/** Empties every personal table. Official grid templates stay; grids made by people go. Used on sign-out and account deletion. */
 export async function wipeLocal(db: SQLiteDatabase) {
   await db.withTransactionAsync(async () => {
     await db.execAsync(`
       DELETE FROM photos; DELETE FROM moments; DELETE FROM square_states; DELETE FROM user_grids;
+      DELETE FROM grid_squares WHERE grid_id IN (SELECT id FROM grids WHERE is_official = 0);
+      DELETE FROM grids WHERE is_official = 0;
       DELETE FROM sync_queue; DELETE FROM meta;
     `);
   });
