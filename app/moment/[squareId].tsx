@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -7,12 +7,17 @@ import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { getMomentForSquare, getSquarePrompt, saveMoment, deleteMoment } from '@/db/repo';
 import { pickFromLibrary, takePhoto, type StoredPhoto } from '@/lib/photos';
+import { removeFiles } from '@/lib/files';
+import { useSync } from '@/sync/SyncProvider';
 import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors, fonts, radius } from '@/theme';
 
 const MAX_PHOTOS = 6;
+
+/** A photo on the sheet: one already saved with the moment (has an id) or one just added. */
+type SheetPhoto = StoredPhoto & { id?: string };
 
 export default function MomentSheet() {
   const { squareId } = useLocalSearchParams<{ squareId: string }>();
@@ -27,9 +32,22 @@ export default function MomentSheet() {
   const [place, setPlace] = useState('');
   const [weather, setWeather] = useState('');
   const [withPeople, setWithPeople] = useState('');
-  const [photos, setPhotos] = useState<StoredPhoto[]>([]);
+  const [photos, setPhotos] = useState<SheetPhoto[]>([]);
   const [cover, setCover] = useState(0);
   const [saving, setSaving] = useState(false);
+  const sync = useSync();
+  // Files added on this sheet that aren't saved yet; removed if the sheet closes without saving.
+  const fresh = useRef(new Set<string>());
+  const saved = useRef(false);
+
+  useEffect(() => () => {
+    if (!saved.current) removeFiles([...fresh.current]);
+  }, []);
+
+  const addFresh = (ps: StoredPhoto[]) => {
+    for (const p of ps) fresh.current.add(p.path);
+    setPhotos((x) => [...x, ...ps]);
+  };
 
   useEffect(() => {
     (async () => {
@@ -43,7 +61,7 @@ export default function MomentSheet() {
         setPlace(existing.place);
         setWeather(existing.weather);
         setWithPeople(existing.withPeople);
-        setPhotos(existing.photos.map((p) => ({ uri: p.uri, width: 0, height: 0, bytes: 0 })));
+        setPhotos(existing.photos.map((p) => ({ id: p.id, path: p.path, uri: p.uri, width: p.width, height: p.height, bytes: 0 })));
         const c = existing.photos.findIndex((p) => p.isCover);
         setCover(c < 0 ? 0 : c);
       }
@@ -54,13 +72,15 @@ export default function MomentSheet() {
     const room = MAX_PHOTOS - photos.length;
     if (room < 1) return;
     Alert.alert('Add a photo', undefined, [
-      { text: 'Take a photo', onPress: async () => { const p = await takePhoto(); if (p) setPhotos((x) => [...x, p]); } },
-      { text: 'Choose from library', onPress: async () => { const ps = await pickFromLibrary(room); if (ps.length) setPhotos((x) => [...x, ...ps]); } },
+      { text: 'Take a photo', onPress: async () => { const p = await takePhoto(); if (p) addFresh([p]); } },
+      { text: 'Choose from library', onPress: async () => { const ps = await pickFromLibrary(room); if (ps.length) addFresh(ps); } },
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
   const removePhoto = (i: number) => {
+    const p = photos[i];
+    if (p && !p.id && fresh.current.delete(p.path)) removeFiles([p.path]);
     setPhotos((x) => x.filter((_, j) => j !== i));
     setCover((c) => (c === i ? 0 : c > i ? c - 1 : c));
   };
@@ -68,18 +88,32 @@ export default function MomentSheet() {
   const save = async () => {
     if (!meta || saving) return;
     setSaving(true);
-    await saveMoment(db, squareId, {
+    const r = await saveMoment(db, squareId, {
       title: meta.prompt, body: body.trim(), happenedOn, place: place.trim(), weather: weather.trim(),
       withPeople: withPeople.trim(), photos, coverIndex: Math.min(cover, Math.max(0, photos.length - 1)),
     });
-    router.back();
+    saved.current = true;
+    removeFiles(r.removedFiles);
+    sync.request();
+    if (r.completedGrid) router.replace({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: r.completedGrid } });
+    else router.back();
   };
 
   const remove = () => {
     if (!momentId) return;
     Alert.alert('Remove this moment?', 'The square goes back to revealed. Squares it revealed stay revealed.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await deleteMoment(db, momentId); router.back(); } },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const r = await deleteMoment(db, momentId);
+          removeFiles([...r.removedFiles, ...fresh.current]);
+          saved.current = true;
+          sync.request();
+          router.back();
+        },
+      },
     ]);
   };
 
@@ -126,7 +160,7 @@ export default function MomentSheet() {
           <Text variant="label">Photos</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {photos.map((p, i) => (
-              <Pressable key={p.uri} onLongPress={() => setCover(i)} style={styles.photo}>
+              <Pressable key={p.path} onLongPress={() => setCover(i)} style={styles.photo}>
                 <Image source={{ uri: p.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
                 {i === cover && <View style={styles.coverBadge}><Text variant="caption" style={{ color: '#fff', fontFamily: fonts.bodyBold, fontSize: 10, letterSpacing: 1 }}>COVER</Text></View>}
                 <Pressable onPress={() => removePhoto(i)} style={styles.removeBadge} accessibilityLabel="Remove photo">

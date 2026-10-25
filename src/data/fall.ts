@@ -1,0 +1,90 @@
+import type { StarterGrid } from './types';
+
+export const fall: StarterGrid = {
+  id: 'grid_fall',
+  title: 'Fall',
+  color: '#C4612D',
+  theme: 'Seasons',
+  size: 'small',
+  description: 'One season, start to finish. Small on purpose: it should be finishable before the first snow.',
+  clusters: [
+    {
+      name: 'Outdoors',
+      prompts: [
+        'Catch a falling leaf',
+        'Walk somewhere after dark on purpose',
+        'Rake, then jump in',
+        'Hike when the color is peaking',
+        'Watch geese fly south',
+        'Visit an orchard',
+        'Walk through a corn maze',
+        'Sit outside in a sweater until it is too cold',
+      ],
+    },
+    {
+      name: 'Food',
+      prompts: [
+        'Drink something hot outside',
+        'Make cider at home',
+        'Bake a pie from scratch',
+        'Roast a whole squash',
+        'Make chili and share it',
+        'Eat a candy apple',
+        'Make soup for a neighbor',
+        'Try the pumpkin thing you would normally mock',
+      ],
+    },
+    {
+      name: 'Home',
+      prompts: [
+        'Light the first fire of the year',
+        'Swap the closet over to sweaters',
+        'Read a whole book under a blanket',
+        'A rainy Sunday with no plans',
+        'Rearrange a room for cozy',
+        'Make a fall playlist',
+        'Clean the gutters and feel smug',
+        'Buy a plant to keep alive all winter',
+      ],
+    },
+    {
+      name: 'Spooky',
+      prompts: [
+        'Carve a pumpkin',
+        'A scary movie with the lights off',
+        'Visit a cemetery in daylight',
+        'Tell a ghost story',
+        'Go through a haunted house',
+        'Hand out candy',
+        'Wear a costume to something that did not ask for one',
+        'Read a ghost story aloud',
+      ],
+    },
+    {
+      name: 'Make',
+      prompts: [
+        'Press a leaf',
+        'Knit or crochet something, badly',
+        'Photograph the same tree every week',
+        'Make a wreath',
+        'Write a letter to spring',
+        'Build a bird feeder',
+        'Paint a pumpkin instead of carving it',
+        'Make a playlist for a long drive',
+      ],
+    },
+    {
+      name: 'Rituals',
+      prompts: [
+        'A walk on the first frost',
+        'Stay up to watch the clocks change',
+        'A drive to see the leaves',
+        'Thanksgiving with people who are not family',
+        'Plant bulbs for spring',
+        'The last outdoor meal of the year',
+        'Say goodbye to the garden',
+        'The first morning you can see your breath',
+      ],
+    },
+  ],
+};
