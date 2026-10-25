@@ -16,6 +16,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Two-phone sync tests; needs Node 22 for the built-in node:sqlite.
+      - run: npm test
 
   db-tests:
     runs-on: ubuntu-latest
