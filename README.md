@@ -59,7 +59,7 @@ npm run build:site    # writes dist-site/: website/ at the root, the app under /
 2. Under Settings → Environment Variables, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 3. In Supabase → Authentication → URL Configuration, add `https://<your-domain>/app/**` (and `http://localhost:8081/**` for development) to the redirect URLs.
 4. In Supabase → Authentication → Providers → Google, turn Google on with a Google Cloud web client id and secret. In Google Cloud, add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI.
-5. So Google's account picker names your site rather than the Supabase project, also add `https://<your-domain>/app/` as an authorized redirect URI on the same Google client, and set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel. Without that variable the site signs in through Supabase as in step 4.
+5. So Google's account picker names your site rather than the Supabase project, also add `https://<your-domain>/auth` as an authorized redirect URI on the same Google client (`website/auth.html` hands the answer to the app; add `http://localhost:8081/` too for development), and set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel. Without that variable the site signs in through Supabase as in step 4.
 6. Email sign-in sends a 6-digit code. In Supabase → Authentication → Emails, add `{{ .Token }}` to the Magic Link template. Supabase's built-in mailer only reaches the project's team members, so set up custom SMTP before anyone else signs in by email.
 
 Vercel Web Analytics counts page views on the website and the web app (cookieless; turn it on in the Vercel project's Analytics tab). The phone app has none.
