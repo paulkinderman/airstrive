@@ -15,3 +15,9 @@ GoogleService-Info.plist
 *.p8
 *.jks
 *.keystore
+
+# admin/ (Next.js moderation site)
+admin/.next/
+admin/out/
+admin/next-env.d.ts
+admin/*.tsbuildinfo

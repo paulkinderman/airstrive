@@ -63,3 +63,33 @@ export function placeClusters(grid: StarterGrid): { idx: number; prompt: string;
     return { idx: r * cols + c, ...item };
   });
 }
+
+/**
+ * Every index on the board as one path spiralling out from the starting squares, so the
+ * first squares on the path are the ones revealed at the start and consecutive squares
+ * touch. Grids people make are laid out along it: their own squares first, then each
+ * cluster of suggestions together.
+ */
+export function spiralOrder(size: GridSize): number[] {
+  const { cols, rows } = SIZES[size];
+  const first = startingSquares(size)[0];
+  let r = Math.floor(first / cols);
+  let c = first % cols;
+  const out: number[] = [];
+  const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  let d = 0;
+  let len = 1;
+  out.push(r * cols + c);
+  while (out.length < cols * rows) {
+    for (let twice = 0; twice < 2; twice++) {
+      for (let step = 0; step < len; step++) {
+        r += dirs[d][0];
+        c += dirs[d][1];
+        if (r >= 0 && r < rows && c >= 0 && c < cols) out.push(r * cols + c);
+      }
+      d = (d + 1) % 4;
+    }
+    len++;
+  }
+  return out;
+}

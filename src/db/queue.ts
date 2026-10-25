@@ -4,6 +4,8 @@ import { nowIso } from '@/lib/ids';
 /** Tables that sync, parents before children. */
 export const SYNCED_TABLES = ['user_grids', 'square_states', 'moments', 'photos'] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
+/** Grids the person made also go through the queue, ahead of everything else. */
+export type QueuedTable = SyncedTable | 'grids';
 
 /**
  * Marks a row as changed. The queue holds one entry per row and the pusher reads the
@@ -11,7 +13,7 @@ export type SyncedTable = (typeof SYNCED_TABLES)[number];
  * changes on every mark, which lets the pusher tell whether the row moved again while
  * its upload was in flight.
  */
-export async function markDirty(db: SQLiteDatabase, tbl: SyncedTable, rowId: string) {
+export async function markDirty(db: SQLiteDatabase, tbl: QueuedTable, rowId: string) {
   await db.runAsync(
     `INSERT INTO sync_queue (tbl, row_id, dirty_at) VALUES (?, ?, ?)
      ON CONFLICT (tbl, row_id) DO UPDATE SET

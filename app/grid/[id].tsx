@@ -3,14 +3,16 @@ import { View, Pressable, StyleSheet, useWindowDimensions, ScrollView, Alert } f
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
-import { loadBoard, spendFreebie, type BoardSquare } from '@/db/repo';
+import Svg, { Path, Circle } from 'react-native-svg';
+import { loadBoard, spendFreebie, removeFromShelf, hasMoments, setGridShared, type BoardSquare } from '@/db/repo';
 import { useSync } from '@/sync/SyncProvider';
+import { useAuth } from '@/auth/AuthProvider';
 import { useDataVersion } from '@/sync/events';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Tile } from '@/ui/Tile';
 import { Button } from '@/ui/Button';
+import { Menu, type MenuItem } from '@/ui/Menu';
 import { colors, radius } from '@/theme';
 
 type Board = NonNullable<Awaited<ReturnType<typeof loadBoard>>>;
@@ -23,7 +25,9 @@ export default function GridScreen() {
   const { width } = useWindowDimensions();
   const [board, setBoard] = useState<Board | null>(null);
   const [selected, setSelected] = useState<string | null>(select ?? null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const sync = useSync();
+  const { userId } = useAuth();
   const version = useDataVersion();
 
   const reload = useCallback(async () => {
@@ -61,6 +65,35 @@ export default function GridScreen() {
     ]);
   };
 
+  const mine = !!board.authorId && board.authorId === userId;
+
+  const onRemove = async () => {
+    if (await hasMoments(db, id)) {
+      Alert.alert('This grid has moments', 'Grids with moments stay on your shelf so nothing in Memory Lane goes missing.');
+      return;
+    }
+    Alert.alert(`Remove ${board.title}?`, 'It comes off your shelf. You can add it again from the Atlas any time.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: async () => { await removeFromShelf(db, id); sync.request(); router.back(); },
+      },
+    ]);
+  };
+
+  const onShare = async () => {
+    await setGridShared(db, board.gridId, !board.isPublic);
+    sync.request();
+    reload();
+  };
+
+  const menuItems: MenuItem[] = [
+    ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
+    { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
+    { label: 'Remove from your grids', destructive: true, onPress: onRemove },
+  ];
+  const onMenu = () => setMenuOpen(true);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 260 }}>
@@ -69,15 +102,20 @@ export default function GridScreen() {
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           </Pressable>
           <Text variant="label">Grid</Text>
+          <View style={{ flexDirection: 'row' }}>
+          <Pressable onPress={onMenu} style={styles.iconButton} accessibilityLabel="More">
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill={colors.ink}>
+              <Circle cx={5} cy={12} r={2} /><Circle cx={12} cy={12} r={2} /><Circle cx={19} cy={12} r={2} />
+            </Svg>
+          </Pressable>
           {board.completedAt ? (
             <Pressable onPress={() => router.push({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: id } })} style={styles.iconButton} accessibilityLabel="Chapter cover">
               <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" /><Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
               </Svg>
             </Pressable>
-          ) : (
-            <View style={styles.iconButton} />
-          )}
+          ) : null}
+          </View>
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 4 }}>
@@ -140,6 +178,13 @@ export default function GridScreen() {
           )}
         </View>
       )}
+      <Menu
+        visible={menuOpen}
+        title={board.title}
+        note={mine ? (board.isPublic ? 'Shared to the Atlas. People who added it keep it if you stop sharing.' : 'Only you can see this grid.') : undefined}
+        items={menuItems}
+        onClose={() => setMenuOpen(false)}
+      />
     </View>
   );
 }
