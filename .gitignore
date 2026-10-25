@@ -8,3 +8,10 @@ android/
 .env
 .env.*
 !.env.example
+
+.env*.local
+google-services.json
+GoogleService-Info.plist
+*.p8
+*.jks
+*.keystore
