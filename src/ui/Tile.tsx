@@ -43,11 +43,18 @@ export function Tile({
   const frontStyle = useAnimatedStyle(() => ({ opacity: frontOpacity.value }));
 
   const radius = Math.max(6, size * 0.27);
+  // Screen readers and the UI tests find squares by these.
+  const a11y = {
+    testID: `square-${square.idx}`,
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: square.state === 'hidden' ? `Square ${square.idx + 1}, hidden` : `Square ${square.idx + 1}, ${square.prompt}, ${square.state}`,
+    accessibilityState: { selected },
+  };
   const ring = selected ? { borderWidth: 3, borderColor: colors.ink } : null;
 
   if (square.state === 'done' && uris.length > 0) {
     return (
-      <Pressable onPress={onPress} style={[{ width: size, height: size, borderRadius: radius, overflow: 'hidden' }, ring]}>
+      <Pressable {...a11y} onPress={onPress} style={[{ width: size, height: size, borderRadius: radius, overflow: 'hidden' }, ring]}>
         <Image source={{ uri: uris[back] ?? uris[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
           <Image source={{ uri: uris[front] }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -59,6 +66,7 @@ export function Tile({
   const bg = square.state === 'done' ? color : square.state === 'revealed' ? colors.card : colors.tileHidden;
   return (
     <Pressable
+      {...a11y}
       onPress={onPress}
       style={[
         { width: size, height: size, borderRadius: radius, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' },

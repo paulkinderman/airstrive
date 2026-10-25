@@ -1,0 +1,21 @@
+# A fresh install, using the dev-only "this phone only" mode so no Apple or Google login is needed.
+appId: app.airstrive.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Moments over metrics."
+    timeout: 120000
+- tapOn: "Continue on this phone only (dev)"
+- assertVisible: "What should we call you?"
+- tapOn: "paulk"
+- inputText: "Maestro"
+- hideKeyboard
+- tapOn: "That's me"
+- extendedWaitUntil:
+    visible: "Your grids"
+    timeout: 20000
+- assertVisible: "Fall"
+- assertVisible: "Running"
+- assertVisible: ".*Maestro.*"
+- takeScreenshot: 01-home
