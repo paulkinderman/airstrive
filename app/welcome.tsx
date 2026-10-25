@@ -6,13 +6,15 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/auth/AuthProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
-import { MiniGrid } from '@/ui/MiniGrid';
+import { Brand } from '@/ui/Brand';
+import { hasSignedInBefore } from '@/auth/returning';
 import { colors, fonts, radius } from '@/theme';
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
+  const [returning] = useState(hasSignedInBefore);
   // Email sign-in: type the address, then the 6-digit code from the email.
   const [emailStep, setEmailStep] = useState<'off' | 'address' | 'code'>('off');
   const [email, setEmail] = useState('');
@@ -45,16 +47,15 @@ export default function Welcome() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24, paddingHorizontal: 24 }}>
-        <View style={{ flex: 1, justifyContent: 'center', gap: 18 }}>
-          <MiniGrid states={['hidden', 'done', 'hidden', 'revealed', 'hidden', 'revealed', 'hidden', 'hidden', 'hidden']} cols={3} color={colors.accent} cell={22} gap={6} />
-          <Text variant="display" style={{ fontSize: 44, lineHeight: 48 }}>
-            Air<Text variant="display" style={{ fontSize: 44, lineHeight: 48, color: colors.accent }}>Strive</Text>
-          </Text>
-          <Text variant="hand" style={{ fontSize: 30, color: colors.muted }}>Moments over metrics.</Text>
-          <Text variant="body" style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
-            Fill in grids of small experiences, one square at a time. Each square you finish keeps a photo and a few words, and
-            Memory Lane turns them into a scrapbook.
-          </Text>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Brand>
+            {!returning && (
+              <Text variant="body" style={{ color: colors.muted, fontSize: 16, lineHeight: 23, textAlign: 'center', maxWidth: 360, paddingTop: 4 }}>
+                Fill in grids of small experiences, one square at a time. Each square you finish keeps a photo and a few words, and
+                Memory Lane turns them into a scrapbook.
+              </Text>
+            )}
+          </Brand>
         </View>
 
         {emailStep !== 'off' ? (

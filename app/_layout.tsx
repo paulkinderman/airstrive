@@ -15,7 +15,7 @@ import { AuthProvider, useAuth, type AuthStatus } from '@/auth/AuthProvider';
 import { SyncProvider } from '@/sync/SyncProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
-import { MiniGrid } from '@/ui/MiniGrid';
+import { BrandScreen } from '@/ui/Brand';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -32,7 +32,8 @@ export default function RootLayout() {
     Caveat_500Medium,
   });
 
-  if (!loaded) return null;
+  // The phone keeps its launch screen up until the session is known; the web shows this.
+  if (!loaded) return <BrandScreen textHidden />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -53,7 +54,7 @@ function Routes() {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => {});
   }, [status]);
 
-  if (status === 'loading') return null;
+  if (status === 'loading') return <BrandScreen />;
   if (status === 'settingUp' || status === 'setupFailed') return <SettingUp failed={status === 'setupFailed'} />;
 
   return (
@@ -97,23 +98,22 @@ function landing(status: AuthStatus) {
 function SettingUp({ failed }: { failed: boolean }) {
   const { retrySetup, signOut } = useAuth();
   return (
-    <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
-      <MiniGrid states={['hidden', 'revealed', 'hidden', 'revealed', 'done', 'revealed', 'hidden', 'revealed', 'hidden']} cols={3} color={colors.accent} cell={18} gap={5} />
+    <BrandScreen>
       {failed ? (
-        <>
+        <View style={{ width: '100%', maxWidth: 360, alignItems: 'center', gap: 12, paddingTop: 24 }}>
           <Text variant="title" style={{ textAlign: 'center' }}>Couldn't reach AirStrive</Text>
           <Text variant="body" style={{ color: colors.muted, textAlign: 'center' }}>
             The first sign-in on a phone needs a connection to bring your grids over. Check your signal and try again.
           </Text>
           <Button label="Try again" onPress={retrySetup} style={{ alignSelf: 'stretch' }} />
           <Button label="Sign out" kind="quiet" onPress={signOut} />
-        </>
+        </View>
       ) : (
-        <>
-          <Text variant="title" style={{ textAlign: 'center' }}>Setting up your shelf</Text>
+        <View style={{ alignItems: 'center', gap: 10, paddingTop: 24 }}>
           <ActivityIndicator color={colors.muted} />
-        </>
+          <Text variant="caption" style={{ color: colors.muted }}>Setting up your shelf</Text>
+        </View>
       )}
-    </View>
+    </BrandScreen>
   );
 }

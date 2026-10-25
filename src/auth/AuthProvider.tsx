@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { googleReturn, startGoogleSignIn } from './googleWeb';
 import { getMeta, setMeta } from '@/db/queue';
 import { removeAllPhotos } from '@/lib/files';
+import { forgetSignedIn, markSignedIn } from '@/auth/returning';
 import { normalizeUsername } from '@/lib/username';
 import { prepareForUser } from '@/sync/bootstrap';
 import { wipeLocal } from '@/sync/engine';
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Already set up on this phone before? Then it works offline; otherwise ask to retry.
       if ((await getMeta(db, 'owner')) !== uid) { setStatus('setupFailed'); return; }
     }
+    markSignedIn();
     let name = await getMeta(db, 'username');
     if ((!name || !(await isOnboarded(db))) && supabase) {
       const { data } = await supabase.from('users').select('username, interests, onboarded_at').eq('id', uid).maybeSingle();
@@ -252,6 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
     }
     await forgetPhone();
+    forgetSignedIn();
     if (supabase) await supabase.auth.signOut({ scope: 'local' });
     setStatus('signedOut');
   }, [forgetPhone, session]);
