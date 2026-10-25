@@ -153,3 +153,35 @@ end $$;
 
 reset role;
 select 'atlas checks passed';
+
+-- Nothing beyond the grants the app needs, whatever Supabase's defaults say.
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  begin
+    truncate public.moments;
+    raise exception 'truncate accepted';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.user_grids;
+    raise exception 'delete accepted';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    update public.reports set status = 'dismissed';
+    raise exception 'report update accepted';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+set role anon;
+do $$ begin
+  begin
+    perform 1 from public.users;
+    raise exception 'anon read users';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+select 'grant checks passed';
