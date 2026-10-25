@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Alert, Platform, Pressable, StyleSheet } from 'react-native';
+import { View, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from 'react-native-svg';
@@ -7,12 +7,17 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { MiniGrid } from '@/ui/MiniGrid';
-import { colors, radius } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
+  // Email sign-in: type the address, then the 6-digit code from the email.
+  const [emailStep, setEmailStep] = useState<'off' | 'address' | 'code'>('off');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const attempt = (fn: () => Promise<void>) => async () => {
     if (busy) return;
@@ -26,59 +31,133 @@ export default function Welcome() {
     }
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24, paddingHorizontal: 24 }}>
-      <View style={{ flex: 1, justifyContent: 'center', gap: 18 }}>
-        <MiniGrid states={['hidden', 'done', 'hidden', 'revealed', 'hidden', 'revealed', 'hidden', 'hidden', 'hidden']} cols={3} color={colors.accent} cell={22} gap={6} />
-        <Text variant="display" style={{ fontSize: 44, lineHeight: 48 }}>
-          Air<Text variant="display" style={{ fontSize: 44, lineHeight: 48, color: colors.accent }}>Strive</Text>
-        </Text>
-        <Text variant="hand" style={{ fontSize: 30, color: colors.muted }}>Moments over metrics.</Text>
-        <Text variant="body" style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
-          Fill in grids of small experiences, one square at a time. Each square you finish keeps a photo and a few words, and
-          Memory Lane turns them into a scrapbook.
-        </Text>
-      </View>
+  const sendCode = attempt(async () => {
+    if (!emailOk) return;
+    await auth.sendEmailCode(email);
+    setCode('');
+    setEmailStep('code');
+  });
+  const verify = attempt(async () => {
+    if (code.trim().length < 6) return;
+    await auth.verifyEmailCode(email, code);
+  });
 
-      <View style={{ gap: 12 }}>
-        {auth.appleAvailable && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={radius.md}
-            style={{ height: 50 }}
-            onPress={attempt(auth.signInWithApple)}
-          />
-        )}
-        {auth.googleAvailable && (
-          <Pressable onPress={attempt(auth.signInWithGoogle)} disabled={busy} style={({ pressed }) => [styles.google, pressed && { opacity: 0.85 }]}>
-            <GoogleMark />
-            <Text variant="bodyBold" style={{ fontSize: 16 }}>Continue with Google</Text>
-          </Pressable>
-        )}
-        {!auth.configured && (
-          <Text variant="caption" style={{ textAlign: 'center' }}>
-            Sign-in isn't set up in this build yet. Add the Supabase keys from .env.example and rebuild.
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24, paddingHorizontal: 24 }}>
+        <View style={{ flex: 1, justifyContent: 'center', gap: 18 }}>
+          <MiniGrid states={['hidden', 'done', 'hidden', 'revealed', 'hidden', 'revealed', 'hidden', 'hidden', 'hidden']} cols={3} color={colors.accent} cell={22} gap={6} />
+          <Text variant="display" style={{ fontSize: 44, lineHeight: 48 }}>
+            Air<Text variant="display" style={{ fontSize: 44, lineHeight: 48, color: colors.accent }}>Strive</Text>
           </Text>
-        )}
-        {auth.configured && !auth.googleAvailable && !auth.appleAvailable && (
-          <Text variant="caption" style={{ textAlign: 'center' }}>
-            {Platform.OS === 'android'
-              ? 'Google sign-in needs a development build with the Google client ids set.'
-              : "Sign in with Apple isn't available on this device."}
+          <Text variant="hand" style={{ fontSize: 30, color: colors.muted }}>Moments over metrics.</Text>
+          <Text variant="body" style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
+            Fill in grids of small experiences, one square at a time. Each square you finish keeps a photo and a few words, and
+            Memory Lane turns them into a scrapbook.
           </Text>
+        </View>
+
+        {emailStep !== 'off' ? (
+          <View style={{ gap: 12 }}>
+            {emailStep === 'address' ? (
+              <>
+                <Text variant="bodyBold">What's your email?</Text>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  inputMode="email"
+                  autoFocus
+                  returnKeyType="send"
+                  onSubmitEditing={sendCode}
+                  style={styles.input}
+                />
+                <Button label={busy ? 'Sending…' : 'Email me a code'} onPress={sendCode} disabled={busy || !emailOk} />
+              </>
+            ) : (
+                <>
+                  <Text variant="bodyBold">Check {email.trim()}</Text>
+                  <Text variant="caption">
+                    {Platform.OS === 'web'
+                      ? 'Enter the 6-digit code from the email, or open its link in this browser.'
+                      : 'Enter the 6-digit code from the email.'}
+                  </Text>
+                  <TextInput
+                    value={code}
+                    onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    placeholderTextColor={colors.faint}
+                    autoComplete="one-time-code"
+                    textContentType="oneTimeCode"
+                    keyboardType="number-pad"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={verify}
+                    style={[styles.input, { letterSpacing: 6 }]}
+                  />
+                  <Button label={busy ? 'Checking…' : 'Sign in'} onPress={verify} disabled={busy || code.length < 6} />
+                  <Button label="Send a new code" kind="quiet" onPress={sendCode} disabled={busy} />
+                </>
+              )}
+              <Button label="Other ways to sign in" kind="quiet" onPress={() => setEmailStep('off')} disabled={busy} />
+            </View>
+          ) : (
+          <View style={{ gap: 12 }}>
+            {auth.appleAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={radius.md}
+                style={{ height: 50 }}
+                onPress={attempt(auth.signInWithApple)}
+              />
+            )}
+            {auth.googleAvailable && (
+              <Pressable onPress={attempt(auth.signInWithGoogle)} disabled={busy} style={({ pressed }) => [styles.google, pressed && { opacity: 0.85 }]}>
+                <GoogleMark />
+                <Text variant="bodyBold" style={{ fontSize: 16 }}>Continue with Google</Text>
+              </Pressable>
+            )}
+            {auth.configured && (
+              <Pressable onPress={() => setEmailStep('address')} disabled={busy} style={({ pressed }) => [styles.google, pressed && { opacity: 0.85 }]}>
+                <MailMark />
+                <Text variant="bodyBold" style={{ fontSize: 16 }}>Continue with email</Text>
+              </Pressable>
+            )}
+            {!auth.configured && (
+              <Text variant="caption" style={{ textAlign: 'center' }}>
+                Sign-in isn't set up in this build yet. Add the Supabase keys from .env.example and rebuild.
+              </Text>
+            )}
+            {Platform.OS === 'web' && auth.configured && (
+              <Text variant="caption" style={{ textAlign: 'center' }}>
+                Sign in with Apple works in the phone app. On the web, use Google or email.
+              </Text>
+            )}
+            {__DEV__ && !auth.configured && <Button label="Continue on this phone only (dev)" kind="secondary" onPress={auth.continueOffline} />}
+            <Text variant="caption" style={{ textAlign: 'center', paddingTop: 4 }}>
+              Your moments stay private unless you choose to share them.
+            </Text>
+          </View>
         )}
-        {Platform.OS === 'web' && auth.configured && (
-          <Text variant="caption" style={{ textAlign: 'center' }}>
-            Sign in with Apple works in the phone app. On the web, use Google.
-          </Text>
-        )}
-        {__DEV__ && !auth.configured && <Button label="Continue on this phone only (dev)" kind="secondary" onPress={auth.continueOffline} />}
-        <Text variant="caption" style={{ textAlign: 'center', paddingTop: 4 }}>
-          Your moments stay private unless you choose to share them.
-        </Text>
       </View>
-    </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+function MailMark() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" accessibilityElementsHidden>
+      <Path d="M3 6h18v12H3z" />
+      <Path d="M3 7l9 6 9-6" />
+    </Svg>
   );
 }
 
@@ -97,5 +176,9 @@ const styles = StyleSheet.create({
   google: {
     height: 50, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.lineStrong,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  input: {
+    height: 56, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.lineStrong, backgroundColor: colors.card,
+    paddingHorizontal: 16, fontFamily: fonts.bodyBold, fontSize: 18, color: colors.ink,
   },
 });

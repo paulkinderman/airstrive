@@ -47,7 +47,7 @@ In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.m
 
 ## Website and web app
 
-The website is the landing page and privacy page in `website/`, plus the same app built for the browser at `/app`. On the web, photos live in IndexedDB and SQLite runs as WebAssembly, so it works offline like the phone app and syncs through the same Supabase account. Sign-in on the web is Google only. Sign in with Apple on the web needs a paid Apple Developer account.
+The website is the landing page and privacy page in `website/`, plus the same app built for the browser at `/app`. On the web, photos live in IndexedDB and SQLite runs as WebAssembly, so it works offline like the phone app and syncs through the same Supabase account. On the web you sign in with Google or with a code sent by email. Sign in with Apple on the web needs a paid Apple Developer account.
 
 ```sh
 npm run build:site    # writes dist-site/: website/ at the root, the app under /app
@@ -59,6 +59,8 @@ npm run build:site    # writes dist-site/: website/ at the root, the app under /
 2. Under Settings → Environment Variables, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 3. In Supabase → Authentication → URL Configuration, add `https://<your-domain>/app/**` (and `http://localhost:8081/**` for development) to the redirect URLs.
 4. In Supabase → Authentication → Providers → Google, turn Google on with a Google Cloud web client id and secret. In Google Cloud, add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI.
+5. So Google's account picker names your site rather than the Supabase project, also add `https://<your-domain>/app/` as an authorized redirect URI on the same Google client, and set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel. Without that variable the site signs in through Supabase as in step 4.
+6. Email sign-in sends a 6-digit code. In Supabase → Authentication → Emails, add `{{ .Token }}` to the Magic Link template. Supabase's built-in mailer only reaches the project's team members, so set up custom SMTP before anyone else signs in by email.
 
 On a computer screen (at least 960 px wide) a few screens switch to wide layouts from `src/wide/`. The grid page shows the board beside a panel for the selected square, with hover previews and arrow keys. Mosaic mode shows the whole grid on a dark wall. Memory Lane pages open as a two-page book. Every other screen stays in a phone-width column. `useWideLayout()` in `src/ui/wide.web.ts` decides which layout to use, and it is always false on phones.
 
@@ -98,7 +100,7 @@ src/
   db/queue.ts                the sync queue: one entry per changed row
   sync/engine.ts             push, pull, photo upload and download, conflict rules
   sync/SyncProvider.tsx      when to sync: launch, foreground, network back, after writes
-  auth/AuthProvider.tsx      Apple / Google sign-in, username, sign-out, deletion
+  auth/AuthProvider.tsx      Apple / Google / email sign-in, username, sign-out, deletion
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf
   lib/printables.ts          HTML for the poster and the scrapbook PDF
   lib/*.web.ts               browser versions: photos in IndexedDB, printing and downloads, dialogs
