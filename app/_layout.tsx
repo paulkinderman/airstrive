@@ -11,7 +11,7 @@ import { Caveat_500Medium } from '@expo-google-fonts/caveat';
 import { migrate } from '@/db/schema';
 import { loadPhotos } from '@/lib/files';
 import '@/lib/webSetup';
-import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { AuthProvider, useAuth, type AuthStatus } from '@/auth/AuthProvider';
 import { SyncProvider } from '@/sync/SyncProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
@@ -56,23 +56,38 @@ function Routes() {
   return (
     <SyncProvider userId={status === 'ready' ? userId : null}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.paper } }}>
-        <Stack.Protected guard={status === 'signedOut'} redirectTo={status === 'ready' ? '/' : '/username'}>
+        <Stack.Protected guard={status === 'signedOut'} redirectTo={landing(status)}>
           <Stack.Screen name="welcome" />
         </Stack.Protected>
-        <Stack.Protected guard={status === 'needsUsername'} redirectTo={status === 'ready' ? '/' : '/welcome'}>
+        <Stack.Protected guard={status === 'needsUsername'} redirectTo={landing(status)}>
           <Stack.Screen name="username" />
         </Stack.Protected>
-        <Stack.Protected guard={status === 'ready'} redirectTo={status === 'needsUsername' ? '/username' : '/welcome'}>
+        <Stack.Protected guard={status === 'onboarding'} redirectTo={landing(status)}>
+          <Stack.Screen name="onboarding/index" />
+          <Stack.Screen name="onboarding/picks" />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'ready'} redirectTo={landing(status)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="grid/[id]" />
           <Stack.Screen name="moment/[squareId]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lane/[momentId]" />
           <Stack.Screen name="lane/chapter/[userGridId]" options={{ contentStyle: { backgroundColor: colors.night } }} />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="atlas/[gridId]" />
+          <Stack.Screen name="make" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="report/[gridId]" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </SyncProvider>
   );
+}
+
+/** Where each sign-in state belongs. */
+function landing(status: AuthStatus) {
+  if (status === 'ready') return '/';
+  if (status === 'onboarding') return '/onboarding';
+  if (status === 'needsUsername') return '/username';
+  return '/welcome';
 }
 
 /** Shown while a first sign-in pulls the account's grids and fills the shelf. */

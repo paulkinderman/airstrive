@@ -11,6 +11,10 @@ export class FakeServer {
     user_grids: new Map(), square_states: new Map(), moments: new Map(), photos: new Map(),
   };
   storage = new Map<string, string>();
+  /** Grids people made, with their squares, as save_grid stores them. */
+  grids = new Map<string, { grid: Row; squares: Row[] }>();
+  profile: { interests: string[]; onboarded_at: string | null } | null = null;
+  suspended = false;
   clock = 0;
   failNext = 0;
   onUpsert?: (table: SyncedTable, rows: Row[]) => Promise<void>;
@@ -41,11 +45,36 @@ export class FakeServer {
           .filter((r) => !after || (r.server_updated_at as string) > after)
           .sort((a, b) => ((a.server_updated_at as string) < (b.server_updated_at as string) ? -1 : 1))
           .slice(0, limit),
-      fetchGrids: async (ids): Promise<GridTemplate[]> =>
-        STARTERS.filter((g) => ids.includes(g.id)).map((g) => ({
-          grid: { ...g, cols: SIZES[g.size].cols, rows: SIZES[g.size].rows, made_by: 'AirStrive', is_public: true, updated_at: '2026-01-01T00:00:00+00:00' },
+      fetchGrids: async (ids): Promise<GridTemplate[]> => [
+        ...STARTERS.filter((g) => ids.includes(g.id)).map((g) => ({
+          grid: { ...g, cols: SIZES[g.size].cols, rows: SIZES[g.size].rows, made_by: 'AirStrive', is_public: true, is_official: true, updated_at: '2026-01-01T00:00:00+00:00' },
           squares: placeClusters(g).map((s) => ({ grid_id: g.id, ...s })),
         })),
+        ...ids.filter((id) => this.grids.has(id)).map((id) => this.grids.get(id)!),
+      ],
+      saveGrid: async (grid, squares) => {
+        if (this.failNext > 0) { this.failNext--; throw new Error('network down'); }
+        let result: 'saved' | 'stale' | 'sharing_suspended' = 'saved';
+        const g = { ...grid };
+        if (g.is_public && this.suspended) { g.is_public = false; result = 'sharing_suspended'; }
+        const old = this.grids.get(g.id as string);
+        if (old) {
+          if (Date.parse(old.grid.updated_at as string) >= Date.parse(g.updated_at as string)) return 'stale';
+          old.grid = { ...old.grid, ...g };
+          return result;
+        }
+        const { cols, rows } = SIZES[g.size as keyof typeof SIZES];
+        if (squares.length !== cols * rows) throw new Error('wrong square count');
+        this.grids.set(g.id as string, {
+          grid: { ...g, cols, rows, made_by: 'paulk', is_official: false, author_id: 'me' },
+          squares: squares.map((s) => ({ grid_id: g.id, hint: '', ...s })),
+        });
+        return result;
+      },
+      saveProfile: async (profile) => {
+        if (this.failNext > 0) { this.failNext--; throw new Error('network down'); }
+        this.profile = profile;
+      },
       uploadPhoto: async (storagePath, localPath) => {
         const content = device.files.get(localPath);
         if (content === undefined) throw new Error('no file');

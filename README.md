@@ -2,7 +2,15 @@
 
 Moments over metrics. Fill in grids of small experiences, one square at a time, and keep the photos and words as a scrapbook.
 
-This is **v1**: Sign in with Apple (and Google, once configured), all six starter grids on the home shelf, sync between phones through Supabase, the chapter cover when a grid is finished, and export and account deletion in Settings. The phone's SQLite database stays the source of truth, so everything works offline.
+This is **v2**: everything in v1 (Sign in with Apple, sync between phones through Supabase, the chapter cover, export and account deletion) plus the Atlas:
+
+- **Onboarding.** After the username, a new profile picks a few interests, sees the Atlas categories that match, and adds as many grids as it likes before reaching the shelf. v1 accounts with no moments yet go through it too; accounts with moments keep their shelf.
+- **Atlas.** Search, a "This season" strip, rows by theme, and a preview of each grid (a peek at the board and its first squares) with Add, Copy and edit, and Report.
+- **Make your own.** Name, color, size and theme, write the squares you care about, and "Suggest the rest" fills the gaps from a reviewed bank of about 1,500 prompts bundled in the app (no model, no network). Your own squares go in the middle so they are revealed first.
+- **Share to the Atlas**, stop sharing, and remove a grid from your shelf (only grids with no moments).
+- **Moderation.** Reports, and a small admin site in `admin/` to hide grids and suspend sharing. Two hides in 30 days suspends sharing automatically.
+
+The phone's SQLite database stays the source of truth, so everything works offline; the Atlas shows what it last fetched.
 
 ## Run it on your phone
 
@@ -32,6 +40,8 @@ supabase link --project-ref <ref>
 supabase db push                          # supabase/migrations
 supabase functions deploy delete-account
 ```
+
+The admin site has its own setup; see [admin/README.md](admin/README.md).
 
 In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.mobile`) and, if used, Google (web client id, with the iOS client id under authorized client ids).
 
@@ -67,14 +77,20 @@ app/                         screens (expo-router)
   welcome.tsx, username.tsx  sign-in and picking a name
   (tabs)/index.tsx           home shelf: greeting, things to try, your grids
   (tabs)/lane.tsx            Memory Lane index, moments and chapter covers
-  (tabs)/atlas.tsx           placeholder until v2
+  onboarding/                interests, then suggested grids to add
+  (tabs)/atlas.tsx           the Atlas: search, this season, rows by theme
+  atlas/[gridId].tsx         grid preview: add, copy and edit, report
+  make.tsx                   make your own, with Suggest the rest
+  report/[gridId].tsx        report a shared grid
   grid/[id].tsx              the board, tiles, bottom sheet, freebies
   moment/[squareId].tsx      log or edit a moment (photos, journal, date, chips)
   lane/[momentId].tsx        scrapbook page with polaroids and handwriting
   lane/chapter/[userGridId]  chapter cover: the finished mosaic, print as poster
   settings.tsx               backup status, export, sign out, delete account
 src/
-  data/                      the six starter grids (424 prompts), sizes, placement, seeding
+  data/                      the six starter grids (424 prompts), sizes, placement, seeding, adopting
+  atlas/                     themes and interests, picks, the Atlas catalog, the preview
+  suggest/                   the reviewed prompt bank and Suggest the rest
   db/schema.ts               SQLite schema and upgrades (v0 phones upgrade in place)
   db/repo.ts                 reads and writes: shelf, board, moments, freebies, pages
   db/queue.ts                the sync queue: one entry per changed row
@@ -88,6 +104,7 @@ website/                     landing page and privacy page (static HTML)
 supabase/
   migrations/                tables, row-level security, triggers, starter grid seed
   functions/delete-account   deletes photos, rows and the auth user
+admin/                       Next.js admin site: reports, hide grids, suspend sharing
   tests/                     SQL checks for RLS and sync rules
 test/                        node --test suites and a fake server
 scripts/starter-sql.ts       regenerates the starter grid seed from src/data
@@ -100,6 +117,8 @@ scripts/starter-sql.ts       regenerates the starter grid seed from src/data
 - Freebies complete a revealed square without a moment and do not refill (1 / 2 / 4 / 6 by size).
 - Done tiles show the moment's cover photo; with several photos they drift between them on a nine-second cycle.
 - When every square is done, a chapter cover joins Memory Lane. Removing a moment from a finished grid takes it away again.
+- A grid someone makes is private until they share it. Its squares are fixed once it is saved, so everyone who adds it plays the same board; the title, color, theme, description and sharing can still change.
+- Stopping sharing or hiding a grid takes it out of the Atlas; people who already added it keep it.
 
 ## Sync
 
@@ -108,5 +127,7 @@ scripts/starter-sql.ts       regenerates the starter grid seed from src/data
 - The newer `updated_at` wins per row; a deleted row stays deleted; a row with queued local changes is never overwritten by a pull. These rules hold on both the phone and in Postgres triggers.
 - Starter grids get ids derived from the person and the grid, so two phones that both start the shelf before syncing make the same rows.
 - If two phones log the same square while offline, the newer moment is kept and the other is deleted.
+- Grids people make are queued like everything else and saved through `save_grid()` before any other rows, one call per grid. A grid that won't save is retried without holding up the rest. Sharing while sharing is suspended saves the grid as private.
+- Interests from onboarding are kept on the phone and sent with the next sync.
 - Photos upload to the private `photos` bucket at `{user_id}/{photo_id}.webp`, and other phones download them on the next sync. Photo paths are stored relative to the documents folder.
 - Signing out empties the phone. Signing in as someone else starts from an empty phone. Data made on v0 before any account is uploaded to the first account that signs in.
