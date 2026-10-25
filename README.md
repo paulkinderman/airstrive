@@ -60,6 +60,8 @@ npm run build:site    # writes dist-site/: website/ at the root, the app under /
 3. In Supabase → Authentication → URL Configuration, add `https://<your-domain>/app/**` (and `http://localhost:8081/**` for development) to the redirect URLs.
 4. In Supabase → Authentication → Providers → Google, turn Google on with a Google Cloud web client id and secret. In Google Cloud, add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI.
 
+On a computer screen (at least 960 px wide) a few screens switch to wide layouts from `src/wide/`. The grid page shows the board beside a panel for the selected square, with hover previews and arrow keys. Mosaic mode shows the whole grid on a dark wall. Memory Lane pages open as a two-page book. Every other screen stays in a phone-width column. `useWideLayout()` in `src/ui/wide.web.ts` decides which layout to use, and it is always false on phones.
+
 The app pages need `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` (expo-sqlite uses SharedArrayBuffer). `vercel.json` sends them for `/app`, and `metro.config.js` does the same for `npx expo start --web`.
 
 ## Tests

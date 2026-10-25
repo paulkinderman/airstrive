@@ -8,13 +8,14 @@ import { colors } from '@/theme';
  *    the "Add a photo" choice, so this draws the same dialog in the page.
  * 2. On a wide screen the app sits in a phone-width column instead of stretching. Screens size
  *    the board and photos from the window width, so the window reports the column's width.
+ *    Screens with a wide layout (src/ui/wide.web.ts) lift the column while they're in front.
  */
 
 const COLUMN = 480;
 
 const css = `
 html, body { background: ${colors.scrap}; }
-#root { max-width: ${COLUMN}px; margin: 0 auto; background: ${colors.paper}; box-shadow: 0 0 0 1px ${colors.line}, 0 20px 60px rgba(31,41,55,.08); }
+body:not([data-wide]) #root { max-width: ${COLUMN}px; margin: 0 auto; background: ${colors.paper}; box-shadow: 0 0 0 1px ${colors.line}, 0 20px 60px rgba(31,41,55,.08); }
 .as-alert-backdrop { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
   padding: 16px; background: rgba(31,41,55,.45); font-family: Nunito_600SemiBold, Nunito, system-ui, sans-serif; }
 .as-alert { width: 100%; max-width: 340px; background: #fff; border-radius: 18px; padding: 20px 20px 12px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
@@ -68,11 +69,24 @@ function showAlert(title: string, message?: string, buttons?: AlertButton[]) {
   (row.querySelector('button:not(.as-cancel)') as HTMLButtonElement | null ?? row.querySelector('button'))?.focus();
 }
 
+let wideScreens = 0;
+
+/** Lifts the phone column while a wide layout is on screen. Calls nest, so pair each true with a false. */
+export function setFullWidth(on: boolean) {
+  const before = wideScreens > 0;
+  wideScreens = Math.max(0, wideScreens + (on ? 1 : -1));
+  if (before === wideScreens > 0) return;
+  if (wideScreens > 0) document.body.dataset.wide = '1';
+  else delete document.body.dataset.wide;
+  // React Native Web re-reads the window size on resize; this tells useWindowDimensions too.
+  (window.visualViewport ?? window).dispatchEvent(new Event('resize'));
+}
+
 function narrowWindow() {
   let raw: ScaledSize | null = null;
   let narrowed: ScaledSize | null = null;
   const narrow = (w: ScaledSize) => {
-    if (w.width <= COLUMN) return w;
+    if (w.width <= COLUMN || wideScreens > 0) return w;
     if (w !== raw) { raw = w; narrowed = { ...w, width: COLUMN }; }
     return narrowed!;
   };

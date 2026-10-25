@@ -11,9 +11,15 @@ import { useDataVersion } from '@/sync/events';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { colors, fonts } from '@/theme';
+import { useWideLayout } from '@/ui/wide';
+import { Book } from '@/wide/Book';
 
-export default function ScrapbookPage() {
+export default function ScrapbookPageScreen() {
   const { momentId } = useLocalSearchParams<{ momentId: string }>();
+  return useWideLayout() ? <Book startKey={momentId} /> : <ScrapbookPage momentId={momentId} />;
+}
+
+function ScrapbookPage({ momentId }: { momentId: string }) {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
