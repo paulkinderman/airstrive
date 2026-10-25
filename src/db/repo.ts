@@ -435,6 +435,8 @@ export interface Chapter {
   lastOn: string | null;
   /** One entry per square in index order: a cover photo, or null for a freebie or a photo-less moment. */
   tiles: (string | null)[];
+  /** The same photos as paths relative to the documents folder, for printing. */
+  tilePaths: (string | null)[];
 }
 
 export type Page =
@@ -473,6 +475,7 @@ export async function getChapter(db: SQLiteDatabase, userGridId: string): Promis
     firstOn: dates[0] ?? null,
     lastOn: dates[dates.length - 1] ?? null,
     tiles: squares.map((s) => (s.cover ? photoUri(s.cover) : null)),
+    tilePaths: squares.map((s) => s.cover),
   };
 }
 

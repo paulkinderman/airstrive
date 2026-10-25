@@ -56,3 +56,17 @@ test('neighbours are orthogonal only', () => {
   assert.deepEqual(neighbours(0, 6, 8).sort((a, b) => a - b), [1, 6]);
   assert.deepEqual(neighbours(7, 6, 8).sort((a, b) => a - b), [1, 6, 8, 13]);
 });
+
+test('chapter captions read like the design', async () => {
+  const { chapterCaption, posterHtml, scrapbookHtml } = await import('../src/lib/printables');
+  assert.equal(chapterCaption(120, '2026-01-12', '2026-10-24'), '120 moments · Jan 12 to Oct 24, 2026');
+  assert.equal(chapterCaption(3, '2025-12-30', '2026-01-02'), '3 moments · Dec 30, 2025 to Jan 2, 2026');
+  assert.equal(chapterCaption(1, '2026-10-24', '2026-10-24'), '1 moment · Oct 24, 2026');
+  const html = posterHtml({ gridTitle: 'Fall <3', gridColor: '#C4612D', cols: 6, tiles: Array(48).fill(null), caption: 'x' });
+  assert.ok(html.includes('Fall &lt;3'), 'escapes text');
+  const book = scrapbookHtml([
+    { kind: 'moment', moment: { title: 'Newer', gridTitle: 'Fall', gridColor: '#C4612D', happenedOn: '2026-10-25', body: '', place: '', weather: '', withPeople: '', photos: [] } },
+    { kind: 'moment', moment: { title: 'Older', gridTitle: 'Fall', gridColor: '#C4612D', happenedOn: '2026-10-01', body: 'hi', place: 'Park', weather: '', withPeople: '', photos: [] } },
+  ], 'paulk');
+  assert.ok(book.indexOf('Older') < book.indexOf('Newer'), 'oldest page first');
+});

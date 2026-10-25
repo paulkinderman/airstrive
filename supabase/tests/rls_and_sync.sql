@@ -111,4 +111,15 @@ do $$ begin
   assert not exists (select 1 from public.moments where body = 'hijack'), 'foreign update blocked';
 end $$;
 
+-- Account deletion: removing the auth user removes every row the person owns.
+delete from auth.users where id = '11111111-1111-1111-1111-111111111111';
+do $$ begin
+  assert (select count(*) from public.users) = 1, 'profile gone';
+  assert (select count(*) from public.user_grids) = 0, 'grids gone';
+  assert (select count(*) from public.square_states) = 0, 'squares gone';
+  assert (select count(*) from public.moments) = 0, 'moments gone';
+  assert (select count(*) from public.photos) = 0, 'photos gone';
+  assert (select count(*) from public.grids) = 6, 'shared templates stay';
+end $$;
+
 select 'all checks passed';

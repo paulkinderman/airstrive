@@ -43,11 +43,12 @@ type GoogleModule = typeof import('@react-native-google-signin/google-signin');
 /** Google sign-in is a native module that Expo Go doesn't include, so load it lazily. */
 function google(): GoogleModule | null {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  if (!webClientId) return null;
+  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  if (!webClientId || (Platform.OS === 'ios' && !iosClientId)) return null;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod: GoogleModule = require('@react-native-google-signin/google-signin');
-    mod.GoogleSignin.configure({ webClientId, iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID });
+    mod.GoogleSignin.configure({ webClientId, iosClientId });
     return mod;
   } catch {
     return null;

@@ -54,13 +54,13 @@ function Routes() {
   return (
     <SyncProvider userId={status === 'ready' ? userId : null}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.paper } }}>
-        <Stack.Protected guard={status === 'signedOut'}>
+        <Stack.Protected guard={status === 'signedOut'} redirectTo={status === 'ready' ? '/' : '/username'}>
           <Stack.Screen name="welcome" />
         </Stack.Protected>
-        <Stack.Protected guard={status === 'needsUsername'}>
+        <Stack.Protected guard={status === 'needsUsername'} redirectTo={status === 'ready' ? '/' : '/welcome'}>
           <Stack.Screen name="username" />
         </Stack.Protected>
-        <Stack.Protected guard={status === 'ready'}>
+        <Stack.Protected guard={status === 'ready'} redirectTo={status === 'needsUsername' ? '/username' : '/welcome'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="grid/[id]" />
           <Stack.Screen name="moment/[squareId]" options={{ presentation: 'modal' }} />
