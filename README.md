@@ -35,6 +35,23 @@ supabase functions deploy delete-account
 
 In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.mobile`) and, if used, Google (web client id, with the iOS client id under authorized client ids).
 
+## Website and web app
+
+The website is the landing page and privacy page in `website/`, plus the same app built for the browser at `/app`. On the web, photos live in IndexedDB and SQLite runs as WebAssembly, so it works offline like the phone app and syncs through the same Supabase account. Sign-in on the web is Google only. Sign in with Apple on the web needs a paid Apple Developer account.
+
+```sh
+npm run build:site    # writes dist-site/: website/ at the root, the app under /app
+```
+
+`vercel.json` deploys it on Vercel's free plan:
+
+1. In Vercel, import the GitHub repo. The build settings come from `vercel.json`.
+2. Under Settings → Environment Variables, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+3. In Supabase → Authentication → URL Configuration, add `https://<your-domain>/app/**` (and `http://localhost:8081/**` for development) to the redirect URLs.
+4. In Supabase → Authentication → Providers → Google, turn Google on with a Google Cloud web client id and secret. In Google Cloud, add `https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect URI.
+
+The app pages need `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` (expo-sqlite uses SharedArrayBuffer). `vercel.json` sends them for `/app`, and `metro.config.js` does the same for `npx expo start --web`.
+
 ## Tests
 
 ```sh
@@ -66,6 +83,8 @@ src/
   auth/AuthProvider.tsx      Apple / Google sign-in, username, sign-out, deletion
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf
   lib/printables.ts          HTML for the poster and the scrapbook PDF
+  lib/*.web.ts               browser versions: photos in IndexedDB, printing and downloads, dialogs
+website/                     landing page and privacy page (static HTML)
 supabase/
   migrations/                tables, row-level security, triggers, starter grid seed
   functions/delete-account   deletes photos, rows and the auth user

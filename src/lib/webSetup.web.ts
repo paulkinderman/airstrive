@@ -1,4 +1,4 @@
-import { Alert, type AlertButton } from 'react-native';
+import { Alert, Dimensions, type AlertButton, type ScaledSize } from 'react-native';
 import { colors } from '@/theme';
 
 /**
@@ -6,12 +6,15 @@ import { colors } from '@/theme';
  *
  * 1. React Native Web's Alert.alert does nothing, and the app uses it for confirmations and
  *    the "Add a photo" choice, so this draws the same dialog in the page.
- * 2. On a wide screen the app sits in a phone-width column instead of stretching.
+ * 2. On a wide screen the app sits in a phone-width column instead of stretching. Screens size
+ *    the board and photos from the window width, so the window reports the column's width.
  */
+
+const COLUMN = 480;
 
 const css = `
 html, body { background: ${colors.scrap}; }
-#root { max-width: 480px; margin: 0 auto; background: ${colors.paper}; box-shadow: 0 0 0 1px ${colors.line}, 0 20px 60px rgba(31,41,55,.08); }
+#root { max-width: ${COLUMN}px; margin: 0 auto; background: ${colors.paper}; box-shadow: 0 0 0 1px ${colors.line}, 0 20px 60px rgba(31,41,55,.08); }
 .as-alert-backdrop { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
   padding: 16px; background: rgba(31,41,55,.45); font-family: Nunito_600SemiBold, Nunito, system-ui, sans-serif; }
 .as-alert { width: 100%; max-width: 340px; background: #fff; border-radius: 18px; padding: 20px 20px 12px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
@@ -65,7 +68,38 @@ function showAlert(title: string, message?: string, buttons?: AlertButton[]) {
   (row.querySelector('button:not(.as-cancel)') as HTMLButtonElement | null ?? row.querySelector('button'))?.focus();
 }
 
+function narrowWindow() {
+  let raw: ScaledSize | null = null;
+  let narrowed: ScaledSize | null = null;
+  const narrow = (w: ScaledSize) => {
+    if (w.width <= COLUMN) return w;
+    if (w !== raw) { raw = w; narrowed = { ...w, width: COLUMN }; }
+    return narrowed!;
+  };
+  const get = Dimensions.get.bind(Dimensions);
+  Dimensions.get = (dim) => (dim === 'window' ? narrow(get(dim)) : get(dim));
+  // React Native Web's useWindowDimensions removes its listener by the original handler.
+  type Handler = (d: { window: ScaledSize; screen: ScaledSize }) => void;
+  const wrapped = new Map<Handler, Handler>();
+  const dims = Dimensions as unknown as {
+    addEventListener: (type: 'change', h: Handler) => { remove: () => void };
+    removeEventListener: (type: 'change', h: Handler) => void;
+  };
+  const add = dims.addEventListener.bind(Dimensions);
+  const remove = dims.removeEventListener.bind(Dimensions);
+  dims.addEventListener = (type, handler) => {
+    const w: Handler = (d) => handler({ ...d, window: narrow(d.window) });
+    wrapped.set(handler, w);
+    return add(type, w);
+  };
+  dims.removeEventListener = (type, handler) => {
+    remove(type, wrapped.get(handler) ?? handler);
+    wrapped.delete(handler);
+  };
+}
+
 if (typeof document !== 'undefined') {
+  narrowWindow();
   const style = document.createElement('style');
   style.textContent = css;
   document.head.appendChild(style);
