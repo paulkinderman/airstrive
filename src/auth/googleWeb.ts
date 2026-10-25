@@ -4,6 +4,8 @@
  * ID token in the URL fragment, which Supabase accepts the same way the phone apps' tokens are.
  */
 
+// localStorage, not sessionStorage: Safari can start a fresh session when the page comes back
+// from Google, because the app's cross-origin isolation headers swap the browsing context.
 const KEY = 'airstrive.googleSignIn';
 
 async function sha256Hex(text: string): Promise<string> {
@@ -15,7 +17,7 @@ async function sha256Hex(text: string): Promise<string> {
 export async function startGoogleSignIn(clientId: string, redirectUri: string) {
   const nonce = crypto.randomUUID();
   const state = crypto.randomUUID();
-  sessionStorage.setItem(KEY, JSON.stringify({ nonce, state }));
+  localStorage.setItem(KEY, JSON.stringify({ nonce, state }));
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -42,11 +44,11 @@ export interface GoogleReturn {
 function readGoogleReturn(): GoogleReturn | null {
   if (typeof window === 'undefined' || !window.location?.hash?.includes('state=')) return null;
   const params = new URLSearchParams(window.location.hash.slice(1));
-  const saved = sessionStorage.getItem(KEY);
+  const saved = localStorage.getItem(KEY);
   if (!saved) return null;
   const { nonce, state } = JSON.parse(saved) as { nonce: string; state: string };
   if (params.get('state') !== state) return null;
-  sessionStorage.removeItem(KEY);
+  localStorage.removeItem(KEY);
   history.replaceState(null, '', window.location.pathname + window.location.search);
   const idToken = params.get('id_token');
   if (!idToken) return null; // Closed the picker or said no.
