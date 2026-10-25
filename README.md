@@ -14,7 +14,7 @@ This is **v1**: Sign in with Apple (and Google, once configured), all six starte
    ```
 3. Scan the QR code with your phone's camera (iOS) or the Expo Go app (Android).
 
-Sign-in needs a development build: Expo Go doesn't include Sign in with Apple's entitlement or Google's native module. Build a development client once:
+Everything in v1 runs in Expo Go on an iPhone, including Sign in with Apple, as long as Expo Go's bundle id `host.exp.Exponent` is listed as an Apple client id in Supabase. Google sign-in is the one exception: it needs a development build, and its button stays hidden in Expo Go. To make a development build:
 
 ```sh
 npx expo run:ios      # needs Xcode on a Mac

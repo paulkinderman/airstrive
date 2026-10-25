@@ -63,7 +63,9 @@ export default function Welcome() {
         )}
         {auth.configured && !auth.googleAvailable && !auth.appleAvailable && (
           <Text variant="caption" style={{ textAlign: 'center' }}>
-            Sign-in needs a development build{Platform.OS === 'android' ? ' with the Google client ids set' : ''}. Expo Go can't show these buttons.
+            {Platform.OS === 'android'
+              ? 'Google sign-in needs a development build with the Google client ids set.'
+              : "Sign in with Apple isn't available on this device."}
           </Text>
         )}
         {__DEV__ && !auth.configured && <Button label="Continue on this phone only (dev)" kind="secondary" onPress={auth.continueOffline} />}
