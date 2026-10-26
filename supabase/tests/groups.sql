@@ -55,15 +55,16 @@ do $$ begin
   exception when not_null_violation or insufficient_privilege then null;
   end;
 
-  assert public.make_group('f1000000-0000-4000-8000-000000000001') = 'f1000000-0000-4000-8000-000000000001', 'group made';
+  assert public.make_group('f1000000-0000-4000-8000-000000000001', true) = 'f1000000-0000-4000-8000-000000000001', 'group made';
   assert public.make_group('f1000000-0000-4000-8000-000000000001') = 'f1000000-0000-4000-8000-000000000001', 'making it twice is fine';
   assert (select audience from public.user_grids where id = 'f1000000-0000-4000-8000-000000000001') = 'private', 'group grid is private';
   assert (select count(*) from public.square_states where group_id = 'f1000000-0000-4000-8000-000000000001') = 4, 'squares in the group';
   assert (select count(*) from public.moments where group_id = 'f1000000-0000-4000-8000-000000000001' and body = '' and audience = 'private') = 2, 'moment words moved out';
-  assert (select audience from public.moment_entries where body = 'Gus words') = 'group', 'shared words become Group';
-  assert (select audience from public.moment_entries where body = 'Gus secret') = 'private', 'private words stay Private';
-  assert (select audience from public.photos where id = 'f4000000-0000-4000-8000-000000000020') = 'group', 'shared photo becomes Group';
-  assert (select audience from public.photos where id = 'f4000000-0000-4000-8000-000000000021') = 'private', 'private photo stays Private';
+  assert (select count(*) from public.moment_entries where audience = 'group') = 2, 'words shared with the group, as asked';
+  assert (select count(*) from public.photos where audience = 'group') = 2, 'photos too';
+  -- Gus keeps one moment to himself.
+  update public.moment_entries set audience = 'private', updated_at = now() + interval '1 minute' where body = 'Gus secret';
+  update public.photos set audience = 'private', updated_at = now() + interval '1 minute' where id = 'f4000000-0000-4000-8000-000000000021';
   assert (select count(*) from public.my_groups()) = 1, 'Gus is in it';
   assert jsonb_array_length(public.profile('e0000000-0000-4000-8000-000000000001')->'grids') = 0, 'group grids leave the profile';
 
@@ -172,7 +173,7 @@ do $$ begin
   assert (select count(*) from public.photos where group_id = 'f1000000-0000-4000-8000-000000000001') = 4, 'all photos but none private of Hal''s';
   assert (select count(*) from storage.objects where name like 'e0000000-0000-4000-8000-000000000002/%') = 2, 'reads Hal''s Group photo files';
   assert (select p->>'status' from public.my_groups(), jsonb_array_elements(people) p where p->>'username' = 'Hal') = 'member', 'Hal is a member';
-  assert (select count(*) from public.group_unshares) = 0, 'nothing unshared yet';
+  assert (select count(*) from public.group_unshares) = 2, 'Gus''s secret entry and photo were made Private';
 end $$;
 
 -- Hal makes a photo Private: Gus's phone is told to drop it.
@@ -180,7 +181,7 @@ set request.jwt.claim.sub = 'e0000000-0000-4000-8000-000000000002';
 update public.photos set audience = 'private', updated_at = now() + interval '1 minute' where id = 'f4000000-0000-4000-8000-000000000023';
 set request.jwt.claim.sub = 'e0000000-0000-4000-8000-000000000001';
 do $$ begin
-  assert (select row_id from public.group_unshares) = 'f4000000-0000-4000-8000-000000000023', 'unshare recorded';
+  assert exists (select 1 from public.group_unshares where row_id = 'f4000000-0000-4000-8000-000000000023'), 'unshare recorded';
   assert not exists (select 1 from public.photos where id = 'f4000000-0000-4000-8000-000000000023'), 'Gus no longer reads it';
   assert (select count(*) from storage.objects where name like 'e0000000-0000-4000-8000-000000000002/%') = 1, 'or its file';
   assert public.invite_to_group('f1000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000003') = 'invited', 'Gus invites Ivy';
@@ -284,6 +285,22 @@ do $$ begin
   exception when raise_exception then
     if sqlerrm <> 'grid not found' then raise; end if;
   end;
+end $$;
+-- Unless asked, what was written before stays Private.
+reset role;
+insert into public.user_grids (id, user_id, grid_id, freebies_left, started_at, updated_at)
+values ('f1000000-0000-4000-8000-000000000003', 'e0000000-0000-4000-8000-000000000003', 'grid_fall', 2, now(), now());
+insert into public.square_states (id, user_id, user_grid_id, idx, state, updated_at)
+values ('f2000000-0000-4000-8000-000000000301', 'e0000000-0000-4000-8000-000000000003', 'f1000000-0000-4000-8000-000000000003', 20, 'done', now());
+insert into public.moments (id, user_id, square_state_id, title, body, happened_on, created_at, updated_at, audience)
+values ('f3000000-0000-4000-8000-000000000301', 'e0000000-0000-4000-8000-000000000003', 'f2000000-0000-4000-8000-000000000301',
+        'Ivy', 'Ivy words', '2026-10-25', now(), now(), 'public');
+set role authenticated;
+do $$ begin
+  perform public.make_group('f1000000-0000-4000-8000-000000000003');
+  assert (select audience from public.moment_entries where body = 'Ivy words') = 'private', 'kept Private by default';
+  update public.moments set body = 'leaked', updated_at = now() + interval '1 minute' where id = 'f3000000-0000-4000-8000-000000000301';
+  assert (select body from public.moments where id = 'f3000000-0000-4000-8000-000000000301') = '', 'group moments never hold words';
 end $$;
 reset role;
 select 'group checks passed';

@@ -9,34 +9,43 @@ import type { SyncedTable } from '@/db/queue';
  *  - bool is 0/1 on the phone and true/false on the server
  *  - timestamp is normalized so the phone's ISO strings compare as text
  *  - `missing` is used when the server doesn't send the column at all (an older server)
+ *  - `pull` columns come from the server and are never sent: the server sets them itself
+ *    (who added a row, and which group grid it belongs to)
  */
 export type ColumnKind = 'text' | 'number' | 'bool' | 'timestamp';
-export interface Column { name: string; kind: ColumnKind; missing?: string | number | null }
+export interface Column { name: string; kind: ColumnKind; missing?: string | number | null; pull?: boolean }
 
 const text = (name: string, missing: string | null = null): Column => ({ name, kind: 'text', missing });
 const num = (name: string): Column => ({ name, kind: 'number' });
 const bool = (name: string): Column => ({ name, kind: 'bool' });
 const ts = (name: string): Column => ({ name, kind: 'timestamp' });
+const fromServer = (name: string): Column => ({ name, kind: 'text', missing: null, pull: true });
 
 export const TABLES: Record<SyncedTable, Column[]> = {
   user_grids: [
     text('id'), text('grid_id'), num('freebies_left'), ts('started_at'), ts('completed_at'), bool('show_moments'),
     // A server from before friends has no audience; everything was private then.
     text('audience', 'private'),
-    ts('updated_at'), ts('deleted_at'),
+    ts('updated_at'), ts('deleted_at'), fromServer('group_id'),
   ],
   square_states: [
     text('id'), text('user_grid_id'), num('idx'), text('state'), ts('done_at'), bool('via_freebie'),
-    ts('updated_at'), ts('deleted_at'),
+    ts('updated_at'), ts('deleted_at'), fromServer('group_id'),
   ],
   moments: [
     text('id'), text('square_state_id'), text('title'), text('body'), text('happened_on'), text('place'), text('weather'),
     text('with_people'), text('audience', 'private'),
-    ts('created_at'), ts('updated_at'), ts('deleted_at'),
+    ts('created_at'), ts('updated_at'), ts('deleted_at'), fromServer('group_id'), fromServer('user_id'),
+  ],
+  // Group moments only: one person's words, seen by the group or by them alone.
+  moment_entries: [
+    text('id'), text('moment_id'), text('body'), text('audience', 'group'),
+    ts('created_at'), ts('updated_at'), ts('deleted_at'), fromServer('group_id'), fromServer('user_id'),
   ],
   photos: [
     text('id'), text('moment_id'), num('position'), text('storage_path'), bool('is_cover'), num('width'), num('height'),
-    num('bytes'), ts('created_at'), ts('updated_at'), ts('deleted_at'),
+    num('bytes'), text('audience', 'group'),
+    ts('created_at'), ts('updated_at'), ts('deleted_at'), fromServer('group_id'), fromServer('user_id'),
   ],
 };
 

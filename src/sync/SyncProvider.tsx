@@ -19,6 +19,7 @@ export interface SyncState {
 interface SyncApi extends SyncState {
   /** Ask for a sync soon. Cheap to call after every write. */
   request: () => void;
+  /** Syncs now, after any sync already running, and resolves when it's done. */
   syncNow: () => Promise<void>;
   retry: () => Promise<void>;
 }
@@ -80,7 +81,10 @@ export function SyncProvider({ userId, children }: { userId: string | null; chil
   const api: SyncApi = {
     ...state,
     request,
-    syncNow: run,
+    syncNow: async () => {
+      while (running.current) await new Promise((r) => setTimeout(r, 200));
+      await run();
+    },
     retry: async () => { await retryFailed(db); await run(); },
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

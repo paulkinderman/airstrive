@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TestDb, asExpo } from './sqlite';
+import { TestDb, asExpo, BEFORE_GROUPS } from './sqlite';
 import { FakeServer, FakeDevice } from './fakeServer';
 import { migrate } from '@/db/schema';
 import { adoptGrid } from '@/data/seed';
@@ -118,6 +118,7 @@ test('a v3 phone upgrades and its unused show-moments switch becomes friends', a
   const db = new TestDb();
   await migrate(asExpo(db));
   const { ug } = await fallGrid(asExpo(db));
+  await db.execAsync(BEFORE_GROUPS);
   await db.execAsync(`ALTER TABLE user_grids DROP COLUMN audience; ALTER TABLE moments DROP COLUMN audience;
     UPDATE user_grids SET show_moments = 1; PRAGMA user_version = 3;`);
   await migrate(asExpo(db));

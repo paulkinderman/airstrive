@@ -152,7 +152,11 @@ begin
     raise exception 'rows can''t move between grids' using errcode = '42501';
   end if;
   new.group_id := parent;
-  if tg_table_name = 'moments' and new.group_id is not null then new.audience := 'private'; end if;
+  -- A group moment's words live in each person's entry.
+  if tg_table_name = 'moments' and new.group_id is not null then
+    new.audience := 'private';
+    new.body := '';
+  end if;
   return new;
 end $$;
 
@@ -318,10 +322,10 @@ create policy photos_bucket_group_list on storage.objects for select to authenti
 
 /**
  * Turns one of your grids into a group grid, with you as its first member. Anything you've
- * already written moves into your entries, Private where the moment was Private and Group
- * otherwise, and the grid and its moments leave your profile.
+ * already written moves into your entries and photos, shared with the group when
+ * share_existing is true and Private otherwise, and the grid leaves your profile.
  */
-create or replace function public.make_group(user_grid uuid) returns uuid
+create or replace function public.make_group(user_grid uuid, share_existing boolean default false) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
   me uuid := auth.uid();
@@ -341,11 +345,11 @@ begin
   update square_states set group_id = user_grid where user_grid_id = user_grid;
   insert into moment_entries (id, user_id, moment_id, group_id, body, audience, created_at, updated_at)
     select gen_random_uuid(), m.user_id, m.id, user_grid, m.body,
-           case when m.audience = 'private' then 'private' else 'group' end, m.created_at, now()
+           case when share_existing then 'group' else 'private' end, m.created_at, now()
     from moments m join square_states ss on ss.id = m.square_state_id
     where ss.user_grid_id = user_grid and m.deleted_at is null and btrim(m.body) <> '';
   update photos p set group_id = user_grid, updated_at = greatest(p.updated_at, now()),
-         audience = case when m.audience = 'private' then 'private' else 'group' end
+         audience = case when share_existing then 'group' else 'private' end
     from moments m join square_states ss on ss.id = m.square_state_id
     where p.moment_id = m.id and ss.user_grid_id = user_grid;
   update moments m set group_id = user_grid, audience = 'private', body = '', updated_at = greatest(m.updated_at, now())
@@ -562,7 +566,7 @@ begin
   foreach f in array array[
     -- regrouping() is read by lww_guard, which runs as the person writing.
     'public.is_group_member(uuid)', 'public.regrouping()', 'public.can_manage_group_folder(text)',
-    'public.make_group(uuid)', 'public.invite_to_group(uuid, uuid)', 'public.cancel_group_invite(uuid, uuid)',
+    'public.make_group(uuid, boolean)', 'public.invite_to_group(uuid, uuid)', 'public.cancel_group_invite(uuid, uuid)',
     'public.respond_group_invite(uuid, boolean)', 'public.leave_group(uuid)', 'public.my_groups()',
     'public.my_group_invites()'
   ] loop

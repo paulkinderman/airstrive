@@ -10,11 +10,16 @@ import { GRID_PUSH, TABLES, columnNames, type Column } from './tables';
  *
  *  1. upload photo files that have no storage path yet
  *  2. push grids the person made, then dirty rows, parents before children, a batch per table
- *  3. pull rows changed on the server since the last pull, per table
- *  4. download photo files this phone doesn't have
+ *  3. catch up on group grids: fetch the whole of a group just joined, drop one just left
+ *  4. pull rows changed on the server since the last pull, per table
+ *  5. download photo files this phone doesn't have
  *
  * Conflicts: the newer updated_at wins per row, a deleted row stays deleted, and a
  * row with local changes still queued is never overwritten by a pull.
+ *
+ * In a group grid the phone only ever queues rows the server lets this person write: the
+ * shared board and moments, and their own entries and photos. Someone else's entry or
+ * photo is never changed here, since the server would turn it away and hold up the queue.
  */
 
 type Row = Record<string, unknown>;
@@ -36,7 +41,17 @@ export interface Remote {
   /** Creates or updates a grid the person made. Squares are only used when it is created. */
   saveGrid(grid: Row, squares: Row[]): Promise<SaveGridResult>;
   saveProfile(profile: { interests: string[]; onboarded_at: string | null }): Promise<void>;
+  /** The group grids this person is in, with everyone the phone needs a name for. */
+  myGroups(): Promise<GroupInfo[]>;
+  /** Like pull, for one group's rows only. Used to fetch a group just joined. */
+  pullGroup(table: SyncedTable, groupId: string, after: string | null, limit: number): Promise<Row[]>;
+  /** Group entries and photos that became Private since `after`. */
+  pullUnshares(after: string | null, limit: number): Promise<Unshare[]>;
 }
+
+export interface GroupPerson { id: string; username: string; status: 'member' | 'invited' | 'left' }
+export interface GroupInfo { group_id: string; people: GroupPerson[] }
+export interface Unshare { group_id: string; row_table: 'moment_entries' | 'photos'; row_id: string; server_updated_at: string }
 
 export type SaveGridResult = 'saved' | 'stale' | 'sharing_suspended';
 
@@ -59,7 +74,10 @@ export function toServer(table: SyncedTable, row: Row): Row {
 
 function outgoing(columns: Column[], row: Row): Row {
   const out: Row = {};
-  for (const c of columns) out[c.name] = c.kind === 'bool' ? row[c.name] === 1 : row[c.name] ?? null;
+  for (const c of columns) {
+    if (c.pull) continue;
+    out[c.name] = c.kind === 'bool' ? row[c.name] === 1 : row[c.name] ?? null;
+  }
   return out;
 }
 
@@ -213,32 +231,50 @@ export async function ensureGrids(db: SQLiteDatabase, remote: Remote, gridIds: s
 }
 
 /** Applies one server row. Returns true if the phone's copy changed. */
-async function applyRow(db: SQLiteDatabase, table: SyncedTable, remoteRow: Row, files: LocalFiles): Promise<boolean> {
+async function applyRow(db: SQLiteDatabase, table: SyncedTable, remoteRow: Row, files: LocalFiles, me: string | null): Promise<boolean> {
   const r = fromServer(table, remoteRow);
   const id = r.id as string;
-  if (await hasPending(db, table, id)) return false;
   const local = await db.getFirstAsync<Row>(`SELECT * FROM ${table} WHERE id = ?`, id);
-  if (local) {
+  // A grid just made into a group grid: the server rewrote its rows (words into entries,
+  // who can see each photo), and its version stands whatever this phone holds.
+  const regrouped = !!local && !local.deleted_at && (local.group_id ?? null) !== (r.group_id ?? null);
+  if (!regrouped && (await hasPending(db, table, id))) return false;
+  if (local && !regrouped) {
     if (local.deleted_at) return false;
     if (!r.deleted_at && String(r.updated_at) < String(local.updated_at)) return false;
     if (!r.deleted_at && columnNames(table).every((c) => (local[c] ?? null) === (r[c] ?? null))) return false;
   }
 
   if (table === 'moments' && !r.deleted_at) {
-    // Two phones logged this square while apart: keep the newer moment, retire the other.
-    const rival = await db.getFirstAsync<{ id: string; updated_at: string }>(
-      'SELECT id, updated_at FROM moments WHERE square_state_id = ? AND deleted_at IS NULL AND id != ?', r.square_state_id as string, id,
+    const rival = await db.getFirstAsync<Row>(
+      'SELECT * FROM moments WHERE square_state_id = ? AND deleted_at IS NULL AND id != ?', r.square_state_id as string, id,
     );
-    if (rival) {
+    if (rival && r.group_id) {
+      // Two people in a group logged this square while apart: the first moment stays, and
+      // everyone moves their own words and photos onto it.
+      if (firstOf(rival, r) === rival) {
+        r.deleted_at = nowIso();
+        await upsertLocal(db, table, r, local);
+        // Anyone in the group may retire it; the first phone to settle tells the others.
+        await markDirty(db, 'moments', id);
+        await moveMine(db, id, String(rival.id), me);
+        return true;
+      }
+      await retireGroupMoment(db, String(rival.id));
+      await upsertLocal(db, table, r, local);
+      await moveMine(db, String(rival.id), id, me);
+      return true;
+    } else if (rival) {
+      // Two phones logged this square while apart: keep the newer moment, retire the other.
       const now = nowIso();
-      if (rival.updated_at > String(r.updated_at)) {
+      if (String(rival.updated_at) > String(r.updated_at)) {
         r.deleted_at = now;
         r.updated_at = now;
         await upsertLocal(db, table, r, local);
         await markDirty(db, 'moments', id);
         return true;
       }
-      await retireMoment(db, rival.id, files);
+      await retireMoment(db, String(rival.id), files);
     }
   }
 
@@ -250,6 +286,18 @@ async function applyRow(db: SQLiteDatabase, table: SyncedTable, remoteRow: Row, 
       "SELECT local_uri FROM photos WHERE moment_id = ? AND local_uri != ''", id,
     );
     files.remove(photos.map((p) => p.local_uri));
+  }
+  // Something of this person's that arrived after its moment was settled into another.
+  if ((table === 'photos' || table === 'moment_entries') && r.group_id && r.user_id === me && !r.deleted_at) {
+    const parent = await db.getFirstAsync<{ deleted_at: string | null; square_state_id: string }>(
+      'SELECT deleted_at, square_state_id FROM moments WHERE id = ?', r.moment_id as string,
+    );
+    if (parent?.deleted_at) {
+      const live = await db.getFirstAsync<{ id: string }>(
+        'SELECT id FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', parent.square_state_id,
+      );
+      if (live) await moveMine(db, r.moment_id as string, live.id, me);
+    }
   }
   return true;
 }
@@ -268,6 +316,54 @@ async function retireMoment(db: SQLiteDatabase, momentId: string, files: LocalFi
   await markDirty(db, 'moments', momentId);
 }
 
+/** The moment that was made first, so every phone settles on the same one. */
+function firstOf(a: Row, b: Row): Row {
+  const ca = String(a.created_at);
+  const cb = String(b.created_at);
+  if (ca !== cb) return ca < cb ? a : b;
+  return String(a.id) < String(b.id) ? a : b;
+}
+
+/** Retires a group moment that lost to another. Anyone in the group may; the first phone to settle tells the rest. */
+async function retireGroupMoment(db: SQLiteDatabase, momentId: string) {
+  const now = nowIso();
+  await db.runAsync('UPDATE moments SET deleted_at = ?, updated_at = ? WHERE id = ?', now, now, momentId);
+  await markDirty(db, 'moments', momentId);
+}
+
+/**
+ * Moves this person's entry and photos from one group moment to another. Their words join
+ * any entry they already have there, since a person has one entry per square.
+ */
+async function moveMine(db: SQLiteDatabase, fromId: string, toId: string, me: string | null) {
+  if (!me) return;
+  const now = nowIso();
+  const photos = await db.getAllAsync<{ id: string }>(
+    'SELECT id FROM photos WHERE moment_id = ? AND user_id = ? AND deleted_at IS NULL', fromId, me,
+  );
+  for (const p of photos) {
+    await db.runAsync('UPDATE photos SET moment_id = ?, is_cover = 0, updated_at = ? WHERE id = ?', toId, now, p.id);
+    await markDirty(db, 'photos', p.id);
+  }
+  const entries = await db.getAllAsync<{ id: string; body: string }>(
+    'SELECT id, body FROM moment_entries WHERE moment_id = ? AND user_id = ? AND deleted_at IS NULL ORDER BY created_at', fromId, me,
+  );
+  for (const e of entries) {
+    const there = await db.getFirstAsync<{ id: string; body: string }>(
+      'SELECT id, body FROM moment_entries WHERE moment_id = ? AND user_id = ? AND deleted_at IS NULL', toId, me,
+    );
+    if (there) {
+      const body = [there.body, e.body].filter((b) => b.trim()).join('\n\n');
+      await db.runAsync('UPDATE moment_entries SET body = ?, updated_at = ? WHERE id = ?', body, now, there.id);
+      await db.runAsync('UPDATE moment_entries SET deleted_at = ?, updated_at = ? WHERE id = ?', now, now, e.id);
+      await markDirty(db, 'moment_entries', there.id);
+    } else {
+      await db.runAsync('UPDATE moment_entries SET moment_id = ?, updated_at = ? WHERE id = ?', toId, now, e.id);
+    }
+    await markDirty(db, 'moment_entries', e.id);
+  }
+}
+
 async function upsertLocal(db: SQLiteDatabase, table: SyncedTable, r: Row, local: Row | null) {
   const cols = columnNames(table);
   const values = cols.map((c) => r[c] as string | number | null);
@@ -284,7 +380,21 @@ async function upsertLocal(db: SQLiteDatabase, table: SyncedTable, r: Row, local
   );
 }
 
-export async function pull(db: SQLiteDatabase, remote: Remote, files: LocalFiles): Promise<number> {
+async function applyPage(db: SQLiteDatabase, table: SyncedTable, rows: Row[], files: LocalFiles, me: string | null, touched: Set<string>) {
+  let changed = 0;
+  await db.withTransactionAsync(async () => {
+    for (const row of rows) {
+      if (await applyRow(db, table, row, files, me)) {
+        changed++;
+        if (table === 'square_states') touched.add(String(row.user_grid_id));
+      }
+    }
+  });
+  return changed;
+}
+
+export async function pull(db: SQLiteDatabase, remote: Remote, files: LocalFiles, userId?: string): Promise<number> {
+  const me = userId ?? (await getMeta(db, 'owner'));
   let changed = 0;
   const touchedGrids = new Set<string>();
   for (const table of SYNCED_TABLES) {
@@ -295,21 +405,122 @@ export async function pull(db: SQLiteDatabase, remote: Remote, files: LocalFiles
       const rows = await remote.pull(table, after, PAGE);
       if (rows.length === 0) break;
       if (table === 'user_grids') await ensureGrids(db, remote, rows.map((r) => String(r.grid_id)));
-      await db.withTransactionAsync(async () => {
-        for (const row of rows) {
-          if (await applyRow(db, table, row, files)) {
-            changed++;
-            if (table === 'square_states') touchedGrids.add(String(row.user_grid_id));
-          }
-        }
-      });
+      changed += await applyPage(db, table, rows, files, me, touchedGrids);
       after = String(rows[rows.length - 1].server_updated_at);
       if (!cursor || after > cursor) await setMeta(db, key, after);
       if (rows.length < PAGE) break;
     }
   }
+  changed += await pullUnshares(db, remote, files, me);
   // Squares finished on two different phones can complete a grid that neither saw complete.
   for (const ug of touchedGrids) await checkComplete(db, ug);
+  return changed;
+}
+
+// ---------- group grids ----------
+
+/**
+ * Brings the phone in line with the groups this person is in: everything in a group they
+ * just joined (its rows are older than the pull cursors), and nothing of one they left.
+ * Also refreshes the names shown on entries. Skipped when the server can't be asked.
+ */
+export async function syncGroups(db: SQLiteDatabase, remote: Remote, files: LocalFiles, me: string): Promise<number> {
+  let groups: GroupInfo[];
+  try {
+    groups = await remote.myGroups();
+  } catch {
+    return 0;
+  }
+  const ids = new Set(groups.map((g) => g.group_id));
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM group_people');
+    for (const g of groups) {
+      for (const p of g.people) {
+        await db.runAsync(
+          'INSERT OR REPLACE INTO group_people (group_id, user_id, username, status) VALUES (?, ?, ?, ?)', g.group_id, p.id, p.username, p.status,
+        );
+      }
+    }
+  });
+
+  const known = new Set<string>(JSON.parse((await getMeta(db, 'groups')) ?? '[]'));
+  let changed = 0;
+  for (const id of ids) {
+    if (known.has(id)) continue;
+    changed += await fetchGroup(db, remote, files, me, id);
+    known.add(id);
+    await setMeta(db, 'groups', JSON.stringify([...known]));
+  }
+  const local = await db.getAllAsync<{ group_id: string }>('SELECT DISTINCT group_id FROM user_grids WHERE group_id IS NOT NULL');
+  for (const id of new Set([...known, ...local.map((r) => r.group_id)])) {
+    if (ids.has(id)) continue;
+    await purgeGroup(db, id, files);
+    changed++;
+  }
+  await setMeta(db, 'groups', JSON.stringify([...ids]));
+  return changed;
+}
+
+async function fetchGroup(db: SQLiteDatabase, remote: Remote, files: LocalFiles, me: string, groupId: string) {
+  let changed = 0;
+  const touched = new Set<string>();
+  for (const table of SYNCED_TABLES) {
+    let after: string | null = null;
+    for (;;) {
+      const rows = await remote.pullGroup(table, groupId, after, PAGE);
+      if (rows.length === 0) break;
+      if (table === 'user_grids') await ensureGrids(db, remote, rows.map((r) => String(r.grid_id)));
+      changed += await applyPage(db, table, rows, files, me, touched);
+      after = String(rows[rows.length - 1].server_updated_at);
+      if (rows.length < PAGE) break;
+    }
+  }
+  return changed;
+}
+
+/** Removes a group grid from the phone, after leaving it or being the last one out. */
+export async function purgeGroup(db: SQLiteDatabase, groupId: string, files: LocalFiles) {
+  const photos = await db.getAllAsync<{ local_uri: string }>(
+    "SELECT local_uri FROM photos WHERE group_id = ? AND local_uri != ''", groupId,
+  );
+  await db.withTransactionAsync(async () => {
+    for (const table of [...SYNCED_TABLES].reverse()) {
+      const where = table === 'user_grids' ? '(group_id = ? OR id = ?)' : 'group_id = ?';
+      const args = table === 'user_grids' ? [groupId, groupId] : [groupId];
+      await db.runAsync(`DELETE FROM sync_queue WHERE tbl = ? AND row_id IN (SELECT id FROM ${table} WHERE ${where})`, table, ...args);
+      await db.runAsync(`DELETE FROM ${table} WHERE ${where}`, ...args);
+    }
+    await db.runAsync('DELETE FROM group_people WHERE group_id = ?', groupId);
+  });
+  files.remove(photos.map((p) => p.local_uri));
+}
+
+/** Drops copies of others' entries and photos that they've since made Private. */
+async function pullUnshares(db: SQLiteDatabase, remote: Remote, files: LocalFiles, me: string | null) {
+  const key = 'pull:group_unshares';
+  const cursor = await getMeta(db, key);
+  let after = cursor ? new Date(Date.parse(cursor) - PULL_OVERLAP_MS).toISOString() : null;
+  let changed = 0;
+  for (;;) {
+    let rows: Unshare[];
+    try {
+      rows = await remote.pullUnshares(after, PAGE);
+    } catch {
+      return changed;
+    }
+    if (rows.length === 0) break;
+    for (const u of rows) {
+      const table = u.row_table === 'photos' ? 'photos' : 'moment_entries';
+      const row = await db.getFirstAsync<{ user_id: string | null; local_uri?: string }>(`SELECT * FROM ${table} WHERE id = ?`, u.row_id);
+      if (!row || row.user_id === me) continue;
+      await db.runAsync(`DELETE FROM ${table} WHERE id = ?`, u.row_id);
+      if (row.local_uri) files.remove([row.local_uri]);
+      changed++;
+    }
+    after = normalizeTs(rows[rows.length - 1].server_updated_at);
+    if (after && (!cursor || after > cursor)) await setMeta(db, key, after);
+    if (rows.length < PAGE) break;
+  }
   return changed;
 }
 
@@ -396,7 +607,8 @@ export async function syncOnce(db: SQLiteDatabase, remote: Remote, files: LocalF
   }
   const p = await push(db, remote);
   if (p.error) error = p.error;
-  const pulled = await pull(db, remote, files);
+  const grouped = await syncGroups(db, remote, files, userId);
+  const pulled = grouped + await pull(db, remote, files, userId);
   // Pulling can queue work of its own (a retired duplicate moment, a newly completed grid).
   const p2 = await push(db, remote);
   const downloaded = await downloadPhotos(db, remote, files);
@@ -425,7 +637,8 @@ export async function retryFailed(db: SQLiteDatabase) {
 export async function wipeLocal(db: SQLiteDatabase) {
   await db.withTransactionAsync(async () => {
     await db.execAsync(`
-      DELETE FROM photos; DELETE FROM moments; DELETE FROM square_states; DELETE FROM user_grids;
+      DELETE FROM photos; DELETE FROM moment_entries; DELETE FROM moments; DELETE FROM square_states; DELETE FROM user_grids;
+      DELETE FROM group_people;
       DELETE FROM grid_squares WHERE grid_id IN (SELECT id FROM grids WHERE is_official = 0);
       DELETE FROM grids WHERE is_official = 0;
       DELETE FROM sync_queue; DELETE FROM meta;

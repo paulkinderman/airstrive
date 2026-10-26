@@ -42,6 +42,8 @@ export interface Moment {
   place: string;
   weather: string;
   withPeople: string;
+  /** Set for a moment in a group grid, whose words are each person's own (src/groups). */
+  groupId: string | null;
   audience: Audience;
   /** The grid's audience; the moment's can't be wider. */
   gridAudience: Audience;

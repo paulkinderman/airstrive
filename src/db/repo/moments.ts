@@ -125,8 +125,12 @@ export async function deleteMoment(db: SQLiteDatabase, momentId: string): Promis
   return { completedGrid: null, removedFiles };
 }
 
+// A group moment's words are in its entries; the first one stands in for the body here.
 const MOMENT_SELECT = `
-  SELECT m.id, m.square_state_id, ss.user_grid_id, m.title, m.body, m.happened_on, m.place, m.weather, m.with_people,
+  SELECT m.id, m.square_state_id, ss.user_grid_id, m.title, m.happened_on, m.place, m.weather, m.with_people, m.group_id,
+         CASE WHEN m.group_id IS NULL THEN m.body ELSE COALESCE((
+           SELECT e.body FROM moment_entries e WHERE e.moment_id = m.id AND e.deleted_at IS NULL AND e.body != ''
+           ORDER BY e.created_at LIMIT 1), '') END AS body,
          m.audience, ug.audience AS grid_audience, g.title AS grid_title, g.color AS grid_color, gs.prompt
   FROM moments m
   JOIN square_states ss ON ss.id = m.square_state_id
@@ -137,7 +141,7 @@ const MOMENT_SELECT = `
 
 type MomentRow = {
   id: string; square_state_id: string; user_grid_id: string; title: string; body: string; happened_on: string;
-  place: string; weather: string; with_people: string; audience: string; grid_audience: string;
+  place: string; weather: string; with_people: string; audience: string; grid_audience: string; group_id: string | null;
   grid_title: string; grid_color: string; prompt: string;
 };
 
@@ -158,6 +162,7 @@ async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]>
       place: r.place,
       weather: r.weather,
       withPeople: r.with_people,
+      groupId: r.group_id,
       audience: narrower(asAudience(r.audience), asAudience(r.grid_audience)),
       gridAudience: asAudience(r.grid_audience),
       gridTitle: r.grid_title,
