@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { Alert, Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
+import { useSQLiteContext } from 'expo-sqlite';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { googleReturn, startGoogleSignIn } from './googleWeb';
@@ -15,8 +15,7 @@ import { wipeLocal } from '@/sync/engine';
 import { supabaseRemote } from '@/sync/supabaseRemote';
 import { localFiles } from '@/sync/SyncProvider';
 import { ensureTemplate } from '@/atlas/catalog';
-import { adoptGrid } from '@/data/seed';
-import { removeFromShelf } from '@/db/repo';
+import { accountStatus, completeOnboarding, loadAccount } from './onboarding';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'settingUp' | 'setupFailed' | 'needsUsername' | 'onboarding' | 'ready';
 
@@ -116,18 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((await getMeta(db, 'owner')) !== uid) { setStatus('setupFailed'); return; }
     }
     markSignedIn();
-    let name = await getMeta(db, 'username');
-    if ((!name || !(await isOnboarded(db))) && supabase) {
-      const { data } = await supabase.from('users').select('username, interests, onboarded_at').eq('id', uid).maybeSingle();
-      if (!name) name = data?.username ?? null;
-      if (name) await setMeta(db, 'username', name);
-      if (data?.onboarded_at) {
-        await setMeta(db, 'onboarded_at', data.onboarded_at);
-        await setMeta(db, 'interests', JSON.stringify(data.interests ?? []));
-      }
-    }
-    setUsername(name);
-    setStatus(!name ? 'needsUsername' : (await isOnboarded(db)) ? 'ready' : 'onboarding');
+    const client = supabase;
+    const fetchAccount = client
+      ? async () => (await client.from('users').select('username, interests, onboarded_at').eq('id', uid).maybeSingle()).data
+      : null;
+    const account = await loadAccount(db, fetchAccount);
+    setUsername(account.username);
+    setStatus(account.status);
   }, [db]);
 
   useEffect(() => {
@@ -215,23 +209,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await setMeta(db, 'username', name);
     setUsername(name);
-    setStatus((await isOnboarded(db)) ? 'ready' : 'onboarding');
+    setStatus(await accountStatus(db, name));
     return 'ok' as const;
   }, [db, offline]);
 
   const finishOnboarding = useCallback(async (interests: string[], gridIds: string[]) => {
     if (!userId) return;
-    for (const gridId of gridIds) {
-      if (await ensureTemplate(db, gridId)) await adoptGrid(db, userId, gridId);
-    }
-    // A v1 account's untouched starter shelf makes way for what was picked.
-    const before = await db.getAllAsync<{ id: string; grid_id: string }>('SELECT id, grid_id FROM user_grids WHERE deleted_at IS NULL');
-    for (const ug of before) {
-      if (!gridIds.includes(ug.grid_id)) await removeFromShelf(db, ug.id);
-    }
-    await setMeta(db, 'interests', JSON.stringify(interests));
-    await setMeta(db, 'onboarded_at', new Date().toISOString());
-    await setMeta(db, 'profile_dirty', '1');
+    await completeOnboarding(db, userId, interests, gridIds, (gridId) => ensureTemplate(db, gridId));
     setStatus('ready');
   }, [db, userId]);
 
@@ -285,15 +269,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 /** Where Google and email links come back to on the web: the app's own root, e.g. /app/. */
 function webRedirect(): string {
   return new URL(process.env.EXPO_BASE_URL || '/', window.location.origin).href.replace(/\/?$/, '/');
-}
-
-/**
- * Onboarding happens once per account. Accounts from v1 never saw it: one that has
- * logged a moment keeps its shelf and skips it; one that hasn't gets to start fresh.
- */
-async function isOnboarded(db: SQLiteDatabase): Promise<boolean> {
-  if (await getMeta(db, 'onboarded_at')) return true;
-  return !!(await db.getFirstAsync('SELECT 1 AS x FROM moments LIMIT 1'));
 }
 
 export function useAuth(): AuthApi {
