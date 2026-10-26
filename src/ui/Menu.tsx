@@ -1,15 +1,32 @@
-import { Modal, Pressable, View, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Modal, Platform, Pressable, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { colors, radius } from '@/theme';
 
 export interface MenuItem { label: string; onPress: () => void; destructive?: boolean }
 
-/** A small sheet of actions. Alert can't hold more than three buttons on Android. */
+/**
+ * A small sheet of actions. Alert can't hold more than three buttons on Android.
+ *
+ * An item's action runs once the sheet has gone. On iOS an Alert or a screen opened while
+ * the sheet is still closing never appears, so there it waits for onDismiss.
+ */
 export function Menu({ visible, title, note, items, onClose }: { visible: boolean; title: string; note?: string; items: MenuItem[]; onClose: () => void }) {
   const insets = useSafeAreaInsets();
+  const pending = useRef<(() => void) | null>(null);
+  const runPending = () => {
+    const action = pending.current;
+    pending.current = null;
+    action?.();
+  };
+  useEffect(() => {
+    if (visible || !pending.current || Platform.OS === 'ios') return;
+    const t = setTimeout(runPending, 0);
+    return () => clearTimeout(t);
+  }, [visible]);
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={runPending}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close menu">
         <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]} onPress={() => {}}>
           <View style={{ paddingHorizontal: 20, paddingBottom: 8, gap: 4 }}>
@@ -19,7 +36,7 @@ export function Menu({ visible, title, note, items, onClose }: { visible: boolea
           {items.map((it) => (
             <Pressable
               key={it.label}
-              onPress={() => { onClose(); it.onPress(); }}
+              onPress={() => { pending.current = it.onPress; onClose(); }}
               style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.paper }]}
             >
               <Text variant="bodyBold" style={{ color: it.destructive ? colors.danger : colors.ink }}>{it.label}</Text>

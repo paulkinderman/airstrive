@@ -20,6 +20,7 @@ import { GridAudienceMenu } from '@/friends/GridAudienceMenu';
 import { AUDIENCE_LABEL, gridAudienceLine } from '@/friends/audience';
 import { startTogether } from '@/groups/startTogether';
 import { useTogetherLine } from '@/groups/useTogetherLine';
+import { MomentWords } from '@/groups/MomentWords';
 import { colors, fonts, radius } from '@/theme';
 import { Mosaic } from './Mosaic';
 
@@ -55,9 +56,15 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
       const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
       setSelected(first?.squareStateId ?? null);
     }
+    return b;
   }, [db, id, selected, version]);
 
-  useFocusEffect(useCallback(() => { reload(); setFocused(true); return () => setFocused(false); }, [reload]));
+  // Coming back to a group grid checks for what the others added.
+  useFocusEffect(useCallback(() => {
+    void reload().then((b) => { if (b?.groupId) sync.request(); });
+    setFocused(true);
+    return () => setFocused(false);
+  }, [reload]));
 
   const sq = board?.squares.find((s) => s.squareStateId === selected) ?? null;
 
@@ -310,7 +317,7 @@ function SquarePanel({
           {rest.map((p) => <Image key={p.id} source={{ uri: p.uri }} style={{ width: 64, height: 64, borderRadius: 6 }} contentFit="cover" />)}
         </View>
       )}
-      {moment?.body ? <Text variant="hand" style={{ fontSize: 24, lineHeight: 30 }}>{moment.body}</Text> : null}
+      {moment ? <MomentWords moment={moment} size={24} /> : null}
       {moment && (moment.place || moment.weather || moment.withPeople) ? (
         <Text variant="body" style={{ color: colors.muted, fontFamily: fonts.bodyBold, fontSize: 13 }}>
           {[moment.place, moment.weather, moment.withPeople && `With ${moment.withPeople}`].filter(Boolean).join(' · ')}

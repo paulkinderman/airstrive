@@ -4,7 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { loadBoard, spendFreebie, removeFromShelf, hasMoments, setGridShared, type BoardSquare } from '@/db/repo';
+import { loadBoard, spendFreebie, removeFromShelf, hasMoments, setGridShared, getMomentForSquare, type BoardSquare } from '@/db/repo';
 import { useSync } from '@/sync/SyncProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { useDataVersion } from '@/sync/events';
@@ -49,9 +49,11 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
       const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
       setSelected(first?.squareStateId ?? null);
     }
+    return b;
   }, [db, id, selected, version]);
 
-  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+  // Coming back to a group grid checks for what the others added.
+  useFocusEffect(useCallback(() => { void reload().then((b) => { if (b?.groupId) sync.request(); }); }, [reload]));
 
   if (!board) return <View style={{ flex: 1, backgroundColor: colors.paper }} />;
 
@@ -221,21 +223,26 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
 
 function DoneDetail({ square }: { square: BoardSquare }) {
   const db = useSQLiteContext();
-  const [line, setLine] = useState('');
+  const version = useDataVersion();
+  const [lines, setLines] = useState<string[]>([]);
   useFocusEffect(
     useCallback(() => {
-      if (!square.momentId) { setLine('Completed with a freebie. You can still add a moment.'); return; }
-      // A group moment's words are in its entries.
-      db.getFirstAsync<{ happened_on: string; body: string }>(
-        `SELECT m.happened_on, CASE WHEN m.group_id IS NULL THEN m.body ELSE COALESCE((
-           SELECT e.body FROM moment_entries e WHERE e.moment_id = m.id AND e.deleted_at IS NULL AND e.body != ''
-           ORDER BY e.created_at LIMIT 1), '') END AS body
-         FROM moments m WHERE m.id = ?`, square.momentId,
-      )
-        .then((m) => m && setLine(`${shortDate(m.happened_on)}${m.body ? ' · ' + m.body.slice(0, 90) + (m.body.length > 90 ? '…' : '') : ''}`));
-    }, [db, square.momentId]),
+      if (!square.momentId) { setLines(['Completed with a freebie. You can still add a moment.']); return; }
+      getMomentForSquare(db, square.squareStateId).then((m) => {
+        if (!m) return;
+        const cut = (t: string, n: number) => (t.length > n ? t.slice(0, n) + '…' : t);
+        const date = shortDate(m.happenedOn);
+        // On a group grid, a line for each person who wrote something.
+        if (m.groupId && m.entries.length > 0) setLines([date, ...m.entries.map((e) => `${e.name}: ${cut(e.body, 70)}`)]);
+        else setLines([`${date}${m.body ? ' · ' + cut(m.body, 90) : ''}`]);
+      });
+    }, [db, square.momentId, square.squareStateId, version]),
   );
-  return <Text variant="body" style={{ fontSize: 14, color: colors.muted }}>{line}</Text>;
+  return (
+    <View style={{ gap: 2 }}>
+      {lines.map((l, i) => <Text key={i} variant="body" style={{ fontSize: 14, color: colors.muted }}>{l}</Text>)}
+    </View>
+  );
 }
 
 function Legend({ swatch, label }: { swatch: object; label: string }) {

@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ScrollView, View, Pressable, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,6 +59,7 @@ export default function ProfileTab() {
         await sync.syncNow();
         const here = await db.getFirstAsync('SELECT 1 AS x FROM user_grids WHERE id = ? AND deleted_at IS NULL', inv.groupId);
         if (here) router.push({ pathname: '/grid/[id]', params: { id: inv.groupId } });
+        else Alert.alert('You\'re in', 'The grid will be on your shelf once it has finished downloading.');
       }
     } catch { /* shown by the reload */ }
     setBusy(null);
