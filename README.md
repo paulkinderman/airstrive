@@ -18,6 +18,14 @@ And friends:
 - **Someone's profile** shows the grids that reach you, read-only, with the moments you're allowed to see. There's no feed, and nothing is counted or ranked.
 - **Reports** on moments and people, beside grid reports in the admin site, which can hide a moment or suspend someone's sharing.
 
+And grids done together:
+
+- **Do this together** from a grid's menu, or from a grid in the Atlas, makes a group grid and invites friends to it. Invites show on the Profile tab. There's no limit on group size.
+- **One shared board.** Anyone in the group can do any square. Each square holds one moment: its title, date, place, weather and who with are shared and anyone can edit them; each person adds their own words and photos.
+- **Group or Private.** Each person's words, and each photo, are seen by the group or kept to themselves. A square done with only Private words still shows as done to everyone.
+- **Only the group.** A group grid never shows on profiles or to other friends. Its template can still be shared to the Atlas.
+- **Leaving** takes the grid off your shelf and leaves what you shared for the others. When the last person leaves, the grid is deleted.
+
 The phone's SQLite database stays the source of truth, so everything works offline; the Atlas shows what it last fetched.
 
 ## Run it on your phone
@@ -106,12 +114,15 @@ app/                         screens (expo-router)
   f/[code].tsx               where a friend link or scanned code lands, signed in or not
   people/[userId].tsx        someone's profile: add, accept, remove, block, report
   people/grid/[userGridId]   someone's grid, read-only, with the moments shared with you
+  together/start.tsx         turns a grid into a group grid (needs a connection)
+  together/[groupId].tsx     who's in a group grid: invite friends, cancel invites, leave
   report/moment, report/user report a moment or a person
 src/
   data/                      the six starter grids (424 prompts), sizes, placement, seeding, adopting
   atlas/                     themes and interests, picks, the Atlas catalog, the preview
   suggest/                   the reviewed prompt bank and Suggest the rest
   friends/                   audiences, the friends and profile calls, QR codes, links
+  groups/                    group grids: each person's part of a square, invites, leaving
   db/schema.ts               SQLite schema and upgrades (v0 phones upgrade in place)
   db/repo/                   reads and writes by area: shelf, board, moments, lane, grids
   db/queue.ts                the sync queue: one entry per changed row
@@ -125,7 +136,7 @@ src/
 website/                     landing page, privacy page and the /f/<code> friend link page (static HTML)
 supabase/
   migrations/                tables, row-level security, triggers, starter grid seed
-  functions/delete-account   deletes photos, rows and the auth user
+  functions/delete-account   deletes photos, rows and the auth user; keeps what was shared to group grids
 admin/                       Next.js admin site: reports, hide grids, suspend sharing
   tests/                     SQL checks for RLS and sync rules
 test/                        node --test suites and a fake server
@@ -146,6 +157,9 @@ scripts/starter-sql.ts       regenerates the starter grid seed from src/data
 - Other people's grids and moments never enter the phone's database. They are read from the server when a screen opens, through functions that return only what the viewer may see; every check goes through `can_view()` in Postgres, and photo files are readable only while their moment is.
 - A blocked pair can't find or see each other. A request to someone who blocked you looks sent but never arrives.
 - Someone whose sharing is suspended reaches friends at most. Two hidden moments in 30 days suspends it automatically.
+- A group grid is a `user_grids` row whose `group_id` is its own id; every row under it carries the same `group_id`, set by Postgres from the parent. Membership alone decides who reads it: the owner rules cover solo rows only, so someone who leaves loses access to what they added too, and it stays for the others.
+- In a group grid anyone can change the board and a moment's shared details; only the author changes an entry or a photo. A group moment's own `body` is always empty; the words are in `moment_entries`.
+- Deleting an account clears `user_id` on what it added to group grids (shown as "a former member"), deletes its Private entries and photos there, and moves its shared photo files to `groups/{group_id}/`.
 
 ## Sync
 
@@ -153,7 +167,9 @@ scripts/starter-sql.ts       regenerates the starter grid seed from src/data
 - Pulls page through each table by the server's own `server_updated_at`, starting two minutes before the last cursor.
 - The newer `updated_at` wins per row; a deleted row stays deleted; a row with queued local changes is never overwritten by a pull. These rules hold on both the phone and in Postgres triggers.
 - Starter grids get ids derived from the person and the grid, so two phones that both start the shelf before syncing make the same rows.
-- If two phones log the same square while offline, the newer moment is kept and the other is deleted.
+- If two phones log the same square while offline, the newer moment is kept and the other is deleted. In a group grid the first moment is kept instead, and each phone moves its own person's entry and photos onto it, so nobody's part is lost.
+- Group grids: each sync asks `my_groups()` which groups the person is in. A group just joined is fetched whole (its rows are older than the pull cursors); one just left is removed from the phone. `group_unshares` tells phones to drop an entry or photo someone made Private.
+- When a grid becomes a group grid, the server's rewrite of its rows wins over the phone's copy, whatever the timestamps.
 - Grids people make are queued like everything else and saved through `save_grid()` before any other rows, one call per grid. A grid that won't save is retried without holding up the rest. Sharing while sharing is suspended saves the grid as private.
 - Interests from onboarding are kept on the phone and sent with the next sync.
 - Photos upload to the private `photos` bucket at `{user_id}/{photo_id}.webp`, and other phones download them on the next sync. Photo paths are stored relative to the documents folder.

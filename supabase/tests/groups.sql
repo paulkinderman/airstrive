@@ -129,6 +129,19 @@ values ('f2000000-0000-4000-8000-000000000022', 'f1000000-0000-4000-8000-0000000
 on conflict (id) do update set state = excluded.state, done_at = excluded.done_at, updated_at = excluded.updated_at;
 insert into public.moments (id, square_state_id, title, happened_on, created_at, updated_at) values
   ('f3000000-0000-4000-8000-000000000022', 'f2000000-0000-4000-8000-000000000022', 'Pie night', '2026-10-22', now(), now());
+-- The rest of the phone's upserts on shared rows: the grid (a freebie used) and someone else's moment.
+insert into public.user_grids (id, grid_id, freebies_left, started_at, updated_at, audience)
+values ('f1000000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000001', 1, now(), now() + interval '1 minute', 'private')
+on conflict (id) do update set freebies_left = excluded.freebies_left, updated_at = excluded.updated_at;
+insert into public.moments (id, square_state_id, title, body, happened_on, created_at, updated_at)
+values ('f3000000-0000-4000-8000-000000000021', 'f2000000-0000-4000-8000-000000000021', 'Long walk home', '', '2026-10-21', now(), now() + interval '1 minute')
+on conflict (id) do update set title = excluded.title, updated_at = excluded.updated_at;
+do $$ begin
+  assert (select freebies_left from public.user_grids where id = 'f1000000-0000-4000-8000-000000000001') = 1, 'Hal used a freebie';
+  assert (select group_id from public.user_grids where id = 'f1000000-0000-4000-8000-000000000001') is not null, 'still a group grid';
+  assert (select user_id from public.user_grids where id = 'f1000000-0000-4000-8000-000000000001') = 'e0000000-0000-4000-8000-000000000001', 'still Gus''s row';
+  assert (select title from public.moments where id = 'f3000000-0000-4000-8000-000000000021') = 'Long walk home', 'Hal edited Gus''s moment title';
+end $$;
 insert into public.moment_entries (id, moment_id, body, audience, created_at, updated_at) values
   ('f5000000-0000-4000-8000-000000000022', 'f3000000-0000-4000-8000-000000000022', 'Hal words', 'group', now(), now()),
   ('f5000000-0000-4000-8000-000000000023', 'f3000000-0000-4000-8000-000000000020', 'Hal secret', 'private', now(), now());
