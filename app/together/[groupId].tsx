@@ -110,7 +110,7 @@ export default function TogetherScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: insets.bottom + 32 }}>
         {board && (
-          <Pressable onPress={() => router.replace({ pathname: '/grid/[id]', params: { id: groupId } })} style={[styles.list, styles.row, { marginTop: 0 }]}>
+          <Pressable onPress={() => router.dismissTo({ pathname: '/grid/[id]', params: { id: groupId } })} style={[styles.list, styles.row, { marginTop: 0 }]}>
             <MiniGrid states={board.squares.map((s) => s.state)} cols={board.cols} color={board.color} cell={board.cols >= 10 ? 4 : 5} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="bodyBold">{board.title}</Text>

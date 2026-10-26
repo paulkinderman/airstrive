@@ -9,6 +9,7 @@ import { useDataVersion } from '@/sync/events';
 import { chapterCaption } from '@/lib/printables';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
+import { MomentWords } from '@/groups/MomentWords';
 import { colors, fonts } from '@/theme';
 
 /**
@@ -124,7 +125,9 @@ function MomentPage({ moment: m, width }: { moment: Moment; width: number }) {
       </View>
       <Text variant="display" style={{ fontSize: cover ? 26 : 34, lineHeight: cover ? 30 : 38 }}>{m.title}</Text>
       {!cover && <View style={{ width: 48, height: 3, borderRadius: 2, backgroundColor: m.gridColor }} />}
-      {m.body ? <Text variant="hand" style={!cover && { lineHeight: 36 }}>{m.body}</Text> : <Text variant="hand" style={{ color: colors.faint }}>No words this time.</Text>}
+      {m.body || m.entries.length > 0
+        ? <MomentWords moment={m} style={!cover && { lineHeight: 36 }} />
+        : <Text variant="hand" style={{ color: colors.faint }}>No words this time.</Text>}
       {(m.place || m.weather || m.withPeople) && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[m.place, m.weather, m.withPeople && `With ${m.withPeople}`].filter(Boolean).map((t) => (

@@ -69,12 +69,21 @@ export function SyncProvider({ userId, children }: { userId: string | null; chil
 
   // On sign-in and launch, when the app comes back to the foreground, when the network
   // returns, and every minute while there is work waiting (retries back off per row).
+  // Someone in a group grid also pulls every half minute while the app is open, so what
+  // the others add shows up without leaving the app.
   useEffect(() => {
     if (!userId) return;
     void run();
     const app = AppState.addEventListener('change', (s) => { if (s === 'active') void run(); });
     const net = Network.addNetworkStateListener((s) => { if (s.isInternetReachable) void run(); });
-    const tick = setInterval(() => { void syncStatus(db).then((s) => { if (s.pending > 0) void run(); }); }, 60_000);
+    let ticks = 0;
+    const tick = setInterval(() => {
+      ticks++;
+      void (async () => {
+        if (AppState.currentState === 'active' && (await inGroup(db))) { void run(); return; }
+        if (ticks % 2 === 0 && (await syncStatus(db)).pending > 0) void run();
+      })().catch(() => {});
+    }, 30_000);
     return () => { app.remove(); net.remove(); clearInterval(tick); };
   }, [userId, run, db]);
 
@@ -88,6 +97,10 @@ export function SyncProvider({ userId, children }: { userId: string | null; chil
     retry: async () => { await retryFailed(db); await run(); },
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
+}
+
+async function inGroup(db: ReturnType<typeof useSQLiteContext>) {
+  return !!(await db.getFirstAsync('SELECT 1 AS x FROM user_grids WHERE group_id IS NOT NULL AND deleted_at IS NULL LIMIT 1'));
 }
 
 export function useSync(): SyncApi {
