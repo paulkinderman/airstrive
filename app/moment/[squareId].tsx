@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { getMomentForSquare, getSquarePrompt, saveMoment, deleteMoment } from '@/db/repo';
 import { pickFromLibrary, takePhoto, type StoredPhoto } from '@/lib/photos';
 import { removeFiles } from '@/lib/files';
@@ -13,6 +13,9 @@ import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { AudiencePicker } from '@/friends/AudiencePicker';
+import { DetailChip as Chip } from '@/ui/DetailChip';
+import { GroupMomentSheet } from '@/groups/GroupMomentSheet';
+import { groupOfSquare } from '@/groups/repo';
 import { narrower, type Audience } from '@/friends/audience';
 import { colors, fonts, radius } from '@/theme';
 
@@ -21,8 +24,17 @@ const MAX_PHOTOS = 6;
 /** A photo on the sheet: one already saved with the moment (has an id) or one just added. */
 type SheetPhoto = StoredPhoto & { id?: string };
 
-export default function MomentSheet() {
+export default function MomentScreen() {
   const { squareId } = useLocalSearchParams<{ squareId: string }>();
+  const db = useSQLiteContext();
+  // undefined while looking; a square in a group grid gets the group sheet.
+  const [group, setGroup] = useState<string | null | undefined>(undefined);
+  useEffect(() => { groupOfSquare(db, squareId).then(setGroup); }, [db, squareId]);
+  if (group === undefined) return <View style={{ flex: 1, backgroundColor: colors.paper }} />;
+  return group ? <GroupMomentSheet squareId={squareId} /> : <MomentSheet squareId={squareId} />;
+}
+
+function MomentSheet({ squareId }: { squareId: string }) {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -229,19 +241,6 @@ export default function MomentSheet() {
   );
 }
 
-function Chip({ icon, value, onChange, placeholder }: { icon: 'pin' | 'sun' | 'people'; value: string; onChange: (v: string) => void; placeholder: string }) {
-  return (
-    <View style={styles.chip}>
-      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-        {icon === 'pin' && <><Path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><Circle cx={12} cy={10} r={2.5} /></>}
-        {icon === 'sun' && <><Circle cx={12} cy={12} r={4} /><Path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" /></>}
-        {icon === 'people' && <><Circle cx={9} cy={8} r={3.5} /><Path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.5-6.2" /></>}
-      </Svg>
-      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} style={styles.chipInput} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 4 },
   headerButton: { height: 44, paddingHorizontal: 8, justifyContent: 'center' },
@@ -253,7 +252,5 @@ const styles = StyleSheet.create({
   coverBadge: { position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(31,41,55,0.55)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   removeBadge: { position: 'absolute', top: -6, right: -6, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, borderWidth: 2, borderColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   journal: { minHeight: 150, padding: 16, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.ink },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 12, borderRadius: 19, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.lineStrong },
-  chipInput: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.ink, minWidth: 70, padding: 0 },
   footer: { paddingHorizontal: 20, paddingTop: 12, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.line },
 });

@@ -28,3 +28,11 @@ export class TestDb {
 }
 
 export const asExpo = (db: TestDb) => db as unknown as SQLiteDatabase;
+
+/** Takes a migrated phone back to before group grids (schema v5), for upgrade tests. */
+export const BEFORE_GROUPS = `
+  ALTER TABLE user_grids DROP COLUMN group_id; ALTER TABLE square_states DROP COLUMN group_id;
+  ALTER TABLE moments DROP COLUMN group_id; ALTER TABLE moments DROP COLUMN user_id;
+  ALTER TABLE photos DROP COLUMN group_id; ALTER TABLE photos DROP COLUMN user_id; ALTER TABLE photos DROP COLUMN audience;
+  DROP TABLE moment_entries; DROP TABLE group_people;
+`;

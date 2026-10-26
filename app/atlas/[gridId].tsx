@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import { ensureTemplate, findGrid } from '@/atlas/catalog';
 import { GridPreview } from '@/atlas/GridPreview';
 import type { AtlasGrid } from '@/atlas/picks';
-import { adoptGrid } from '@/data/seed';
+import { adoptGrid, startGrid } from '@/data/seed';
 import { shelfCopyOf } from '@/db/repo';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
@@ -17,7 +17,7 @@ export default function AtlasPreview() {
   const { gridId } = useLocalSearchParams<{ gridId: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId, configured } = useAuth();
   const sync = useSync();
   const [grid, setGrid] = useState<AtlasGrid | null>(null);
   const [copy, setCopy] = useState<string | null>(null);
@@ -53,6 +53,22 @@ export default function AtlasPreview() {
     }
   };
 
+  // A fresh copy for doing it together, even if it's already on the shelf.
+  const together = async () => {
+    if (busy || !userId) return;
+    setBusy(true);
+    try {
+      if (!(await ensureTemplate(db, grid.id))) {
+        Alert.alert("Couldn't add it", 'Doing a grid together needs a connection. Try again when you are back online.');
+        return;
+      }
+      const ug = await startGrid(db, grid.id);
+      router.replace({ pathname: '/together/start', params: { userGridId: ug, share: '0' } });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const mine = !!grid.authorId && grid.authorId === userId;
   const canReport = !grid.isOfficial && !mine;
 
@@ -74,22 +90,25 @@ export default function AtlasPreview() {
         ) : undefined
       }
       footer={
-        <>
-          {copy ? (
-            <Button label="On your shelf · open it" kind="secondary" onPress={() => router.replace({ pathname: '/grid/[id]', params: { id: copy } })} style={{ flex: 1 }} />
-          ) : (
-            <Button label={busy ? 'Adding…' : 'Add to your grids'} onPress={add} disabled={busy} style={{ flex: 1 }} />
-          )}
-          <Pressable
-            onPress={() => router.push({ pathname: '/make', params: { from: grid.id } })}
-            style={{ width: 50, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: colors.lineStrong, alignItems: 'center', justifyContent: 'center' }}
-            accessibilityLabel="Copy and edit"
-          >
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-              <Path d="M4 20h4l10-10-4-4L4 16z" /><Path d="M13 7l4 4" />
-            </Svg>
-          </Pressable>
-        </>
+        <View style={{ flex: 1, gap: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {copy ? (
+              <Button label="On your shelf · open it" kind="secondary" onPress={() => router.replace({ pathname: '/grid/[id]', params: { id: copy } })} style={{ flex: 1 }} />
+            ) : (
+              <Button label={busy ? 'Adding…' : 'Add to your grids'} onPress={add} disabled={busy} style={{ flex: 1 }} />
+            )}
+            <Pressable
+              onPress={() => router.push({ pathname: '/make', params: { from: grid.id } })}
+              style={{ width: 50, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: colors.lineStrong, alignItems: 'center', justifyContent: 'center' }}
+              accessibilityLabel="Copy and edit"
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M4 20h4l10-10-4-4L4 16z" /><Path d="M13 7l4 4" />
+              </Svg>
+            </Pressable>
+          </View>
+          {configured && <Button label="Do this together with friends" kind="secondary" onPress={together} disabled={busy} />}
+        </View>
       }
     />
   );

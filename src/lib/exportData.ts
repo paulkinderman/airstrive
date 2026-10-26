@@ -53,6 +53,8 @@ export async function buildExport(
     moments.push({
       id: m.id, grid: m.gridTitle, prompt: m.prompt, title: m.title, body: m.body, happened_on: m.happenedOn,
       place: m.place, weather: m.weather, with_people: m.withPeople, audience: m.audience, photos: names,
+      // A group grid's moment: everyone's words this phone has, by name.
+      ...(m.groupId ? { together: true, entries: m.entries.map((e) => ({ by: e.name, body: e.body })) } : {}),
     });
   }
 

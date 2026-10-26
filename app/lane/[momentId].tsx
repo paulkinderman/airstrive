@@ -84,7 +84,14 @@ function ScrapbookPage({ momentId }: { momentId: string }) {
         <Text variant="display" style={{ fontSize: cover ? 26 : 34, lineHeight: cover ? 30 : 38 }}>{m.title}</Text>
         {!cover && <View style={{ width: 48, height: 3, borderRadius: 2, backgroundColor: m.gridColor }} />}
 
-        {m.body ? (
+        {m.groupId && m.entries.length > 0 ? (
+          m.entries.map((e, i) => (
+            <View key={i} style={{ gap: 2 }}>
+              <Text variant="label" style={{ fontSize: 11, letterSpacing: 1.2, color: colors.scrapInk }}>{e.name}</Text>
+              <Text variant="hand" style={!cover && styles.ruled}>{e.body}</Text>
+            </View>
+          ))
+        ) : m.body ? (
           <Text variant="hand" style={!cover && styles.ruled}>{m.body}</Text>
         ) : (
           <Text variant="hand" style={{ color: colors.faint }}>No words this time.</Text>

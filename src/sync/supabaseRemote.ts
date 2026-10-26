@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { downloadTo, readBytes } from '@/lib/files';
-import type { Remote, SaveGridResult } from './engine';
+import type { GroupInfo, Remote, SaveGridResult, Unshare } from './engine';
 
 const BUCKET = 'photos';
 
@@ -41,6 +41,26 @@ export function supabaseRemote(client: SupabaseClient): Remote {
       const { data, error } = await client.rpc('save_grid', { g: grid, squares });
       if (error) throw new Error(`grids: ${error.message}`);
       return data as SaveGridResult;
+    },
+    async myGroups() {
+      const { data, error } = await client.rpc('my_groups');
+      if (error) throw new Error(`groups: ${error.message}`);
+      return (data ?? []) as GroupInfo[];
+    },
+    async pullGroup(table, groupId, after, limit) {
+      let q = client.from(table).select('*').eq('group_id', groupId).order('server_updated_at', { ascending: true }).limit(limit);
+      if (after) q = q.gt('server_updated_at', after);
+      const { data, error } = await q;
+      if (error) throw new Error(`${table}: ${error.message}`);
+      return data ?? [];
+    },
+    async pullUnshares(after, limit) {
+      let q = client.from('group_unshares').select('group_id, row_table, row_id, server_updated_at')
+        .order('server_updated_at', { ascending: true }).limit(limit);
+      if (after) q = q.gt('server_updated_at', after);
+      const { data, error } = await q;
+      if (error) throw new Error(`group_unshares: ${error.message}`);
+      return (data ?? []) as Unshare[];
     },
     async saveProfile(profile) {
       const { data: auth } = await client.auth.getUser();

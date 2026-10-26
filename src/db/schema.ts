@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { seedGridTemplates } from '@/data/seed';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** v0's schema, kept as-is so phones that ran v0 upgrade through the same path. */
 export const V1 = `
@@ -165,6 +165,43 @@ const V4 = `
   UPDATE user_grids SET audience = 'friends' WHERE show_moments = 1;
 `;
 
+/**
+ * Group grids: friends doing one grid together. Rows of a group grid carry group_id, and
+ * who added them where it matters (moments, photos, entries). Each person's words on a
+ * group moment are an entry of their own, and the people in each group are kept here so
+ * names show offline.
+ */
+const V5 = `
+  ALTER TABLE user_grids ADD COLUMN group_id TEXT;
+  ALTER TABLE square_states ADD COLUMN group_id TEXT;
+  ALTER TABLE moments ADD COLUMN group_id TEXT;
+  ALTER TABLE moments ADD COLUMN user_id TEXT;
+  ALTER TABLE photos ADD COLUMN group_id TEXT;
+  ALTER TABLE photos ADD COLUMN user_id TEXT;
+  ALTER TABLE photos ADD COLUMN audience TEXT NOT NULL DEFAULT 'group';
+
+  CREATE TABLE moment_entries (
+    id TEXT PRIMARY KEY,
+    moment_id TEXT NOT NULL,
+    group_id TEXT,
+    user_id TEXT,
+    body TEXT NOT NULL DEFAULT '',
+    audience TEXT NOT NULL DEFAULT 'group',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+  );
+  CREATE INDEX idx_entries_moment ON moment_entries(moment_id);
+
+  CREATE TABLE group_people (
+    group_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    status TEXT NOT NULL,
+    PRIMARY KEY (group_id, user_id)
+  );
+`;
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -200,6 +237,14 @@ export async function migrate(db: SQLiteDatabase) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(V4);
       await db.execAsync('PRAGMA user_version = 4');
+    });
+    current = 4;
+  }
+
+  if (current < 5) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(V5);
+      await db.execAsync('PRAGMA user_version = 5');
     });
   }
 

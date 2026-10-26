@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TestDb, asExpo } from './sqlite';
+import { TestDb, asExpo, BEFORE_GROUPS } from './sqlite';
 import { FakeServer, FakeDevice } from './fakeServer';
 import { migrate } from '@/db/schema';
 import { adoptGrid } from '@/data/seed';
@@ -245,6 +245,7 @@ test('signing out removes grids people made but keeps the official ones', async 
 test('a v1 phone upgrades and marks its grids official', async () => {
   const db = new TestDb();
   await migrate(asExpo(db));
+  await db.execAsync(BEFORE_GROUPS);
   await db.execAsync(`ALTER TABLE grids DROP COLUMN is_official; ALTER TABLE grids DROP COLUMN author_id;
     ALTER TABLE user_grids DROP COLUMN audience; ALTER TABLE moments DROP COLUMN audience; PRAGMA user_version = 2;`);
   await migrate(asExpo(db));
