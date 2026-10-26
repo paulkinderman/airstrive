@@ -23,3 +23,6 @@ admin/.next/
 admin/out/
 admin/next-env.d.ts
 admin/*.tsbuildinfo
+
+# Scratch output from local runs (export tests, etc.)
+tmp/

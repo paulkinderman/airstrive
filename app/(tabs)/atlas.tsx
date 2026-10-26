@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View, TextInput, Pressable, StyleSheet, RefreshControl } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { loadAtlas } from '@/atlas/catalog';
+import { useAtlas } from '@/atlas/catalog';
 import { byTheme, featured, searchAtlas, type AtlasGrid } from '@/atlas/picks';
 import { MiniGrid } from '@/ui/MiniGrid';
 import { GridCard } from '@/ui/GridCard';
@@ -14,22 +13,14 @@ import { colors, fonts, radius } from '@/theme';
 import type { SquareState } from '@/db/repo';
 
 export default function Atlas() {
-  const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const [grids, setGrids] = useState<AtlasGrid[]>([]);
-  const [offline, setOffline] = useState(false);
+  const atlas = useAtlas();
+  const grids = atlas.data ?? [];
+  const { offline } = atlas;
   const [q, setQ] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    const r = await loadAtlas(db);
-    setGrids(r.grids);
-    setOffline(r.offline);
-  }, [db]);
-
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const open = (g: AtlasGrid) => router.push({ pathname: '/atlas/[gridId]', params: { gridId: g.id } });
   const results = useMemo(() => (q.trim() ? searchAtlas(grids, q) : null), [grids, q]);
@@ -41,7 +32,7 @@ export default function Atlas() {
       style={{ backgroundColor: colors.paper }}
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 32, gap: 20 }}
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await atlas.refresh(); setRefreshing(false); }} />}
     >
       <View style={{ paddingHorizontal: 20, gap: 4 }}>
         <Text variant="display">Atlas</Text>

@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { loadAtlas } from '@/atlas/catalog';
+import { useAtlas } from '@/atlas/catalog';
 import { byTheme, picksFor, type AtlasGrid } from '@/atlas/picks';
 import { GridPreview } from '@/atlas/GridPreview';
 import { THEME_BLURB, type Theme } from '@/atlas/themes';
@@ -21,19 +20,13 @@ import { colors } from '@/theme';
 export default function Picks() {
   const { interests: raw } = useLocalSearchParams<{ interests?: string }>();
   const interests = useMemo(() => (raw ? raw.split(',').filter(Boolean) : []), [raw]);
-  const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { finishOnboarding } = useAuth();
-  const [grids, setGrids] = useState<AtlasGrid[] | null>(null);
-  const [offline, setOffline] = useState(false);
+  const { data: grids, offline } = useAtlas();
   const [chosen, setChosen] = useState<string[]>([]);
   const [preview, setPreview] = useState<AtlasGrid | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    loadAtlas(db).then((r) => { setGrids(r.grids); setOffline(r.offline); });
-  }, [db]);
 
   const picks = useMemo(() => (grids ? picksFor(interests, grids) : []), [grids, interests]);
   const rest = useMemo(() => {
