@@ -1,8 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { db, errorText, formatDate, type ReportRow } from '@/lib/supabase';
+import { db, errorText, formatDate, type ReportRow, type ReportedMoment } from '@/lib/supabase';
 import { Board } from './Board';
+
+const HIDE_LABEL: Record<ReportRow['target_kind'], string> = { grid: 'Hide grid', moment: 'Hide moment', user: 'Suspend sharing' };
+
+/** The thing a report is about, so reports on the same thing count together. */
+const targetOf = (r: ReportRow) => `${r.target_kind}:${r.grid_id ?? r.moment_id ?? r.user_id}`;
 
 export function Reports() {
   const [rows, setRows] = useState<ReportRow[] | null>(null);
@@ -15,8 +20,9 @@ export function Reports() {
     const { data, error } = await db()
       .from('reports')
       .select(
-        'id, reason, note, created_at, grid_id, ' +
+        'id, reason, note, created_at, target_kind, grid_id, moment_id, user_id, ' +
           'reporter:users!reports_reporter_id_fkey(username), ' +
+          'reported:users!reports_user_id_fkey(username, sharing_suspended), ' +
           'grid:grids(id, title, color, theme, made_by, cols, rows, is_hidden)',
       )
       .eq('status', 'open')
@@ -30,9 +36,9 @@ export function Reports() {
     load();
   }, [load]);
 
-  const perGrid = useMemo(() => {
+  const perTarget = useMemo(() => {
     const m = new Map<string, number>();
-    for (const r of rows ?? []) m.set(r.grid_id, (m.get(r.grid_id) ?? 0) + 1);
+    for (const r of rows ?? []) m.set(targetOf(r), (m.get(targetOf(r)) ?? 0) + 1);
     return m;
   }, [rows]);
 
@@ -59,21 +65,32 @@ export function Reports() {
       <ul className="list">
         {rows?.map((r) => {
           const g = r.grid;
-          const n = perGrid.get(r.grid_id) ?? 1;
+          const n = perTarget.get(targetOf(r)) ?? 1;
           const expanded = open === r.id;
           return (
             <li key={r.id} className="card">
               <div className="row-between">
                 <button className="grid-head linklike" onClick={() => setOpen(expanded ? null : r.id)} aria-expanded={expanded}>
-                  <span className="swatch" style={{ background: g?.color ?? '#ccc' }} />
-                  <span>
-                    <strong>{g?.title ?? r.grid_id}</strong>
-                    <span className="muted small">
-                      {' '}
-                      · {g?.theme} · by {g?.made_by}
-                      {g?.is_hidden && ' · already hidden'}
+                  {r.target_kind === 'grid' ? (
+                    <>
+                      <span className="swatch" style={{ background: g?.color ?? '#ccc' }} />
+                      <span>
+                        <strong>{g?.title ?? r.grid_id}</strong>
+                        <span className="muted small">
+                          {' '}
+                          · {g?.theme} · by {g?.made_by}
+                          {g?.is_hidden && ' · already hidden'}
+                        </span>
+                      </span>
+                    </>
+                  ) : r.target_kind === 'moment' ? (
+                    <span><strong>A moment</strong><span className="muted small"> · open to see it</span></span>
+                  ) : (
+                    <span>
+                      <strong>{r.reported?.username ?? 'Someone'}</strong>
+                      <span className="muted small"> · a person{r.reported?.sharing_suspended && ' · sharing already suspended'}</span>
                     </span>
-                  </span>
+                  )}
                   <span className="chev">{expanded ? '▾' : '▸'}</span>
                 </button>
                 {n > 1 && <span className="pill warn">{n} open reports</span>}
@@ -84,9 +101,10 @@ export function Reports() {
               </p>
               {r.note && <blockquote className="note">{r.note}</blockquote>}
               {expanded && g && <Board gridId={g.id} cols={g.cols} />}
+              {expanded && r.moment_id && <MomentPreview momentId={r.moment_id} />}
               <div className="actions">
                 <button className="btn danger" disabled={busy === r.id} onClick={() => act(r.id, 'hide')}>
-                  Hide grid
+                  {HIDE_LABEL[r.target_kind]}
                 </button>
                 <button className="btn" disabled={busy === r.id} onClick={() => act(r.id, 'dismiss')}>
                   Dismiss
@@ -97,5 +115,45 @@ export function Reports() {
         })}
       </ul>
     </section>
+  );
+}
+
+/** A reported moment with its words and photos, which only admins and the moment's audience can read. */
+function MomentPreview({ momentId }: { momentId: string }) {
+  const [m, setM] = useState<ReportedMoment | null>(null);
+  const [urls, setUrls] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const { data, error } = await db().rpc('admin_moment', { moment: momentId });
+      if (!live) return;
+      if (error || !data) { setError(error ? errorText(error) : 'Moment not found'); return; }
+      const moment = data as ReportedMoment;
+      setM(moment);
+      if (moment.photos.length) {
+        const { data: signed } = await db().storage.from('photos').createSignedUrls(moment.photos, 600);
+        if (live) setUrls((signed ?? []).map((s) => s.signedUrl).filter((u): u is string => !!u));
+      }
+    })();
+    return () => { live = false; };
+  }, [momentId]);
+
+  if (error) return <p className="error">{error}</p>;
+  if (!m) return <p className="muted">Loading…</p>;
+  return (
+    <div className="moment">
+      <p>
+        <strong>{m.title}</strong>
+        <span className="muted small"> · {m.grid} · by {m.owner ?? 'someone'} · {formatDate(m.happened_on)}{m.hidden && ' · already hidden'}</span>
+      </p>
+      {m.body && <blockquote className="note">{m.body}</blockquote>}
+      {urls.length > 0 && (
+        <div className="photos">
+          {urls.map((u) => <img key={u} src={u} alt="" width={120} height={120} style={{ objectFit: 'cover', borderRadius: 8 }} />)}
+        </div>
+      )}
+    </div>
   );
 }

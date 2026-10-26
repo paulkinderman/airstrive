@@ -80,7 +80,16 @@ function Routes() {
           <Stack.Screen name="atlas/[gridId]" />
           <Stack.Screen name="make" options={{ presentation: 'modal' }} />
           <Stack.Screen name="report/[gridId]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="report/moment/[momentId]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="report/user/[userId]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="friends/add" />
+          <Stack.Screen name="friends/code" />
+          <Stack.Screen name="friends/scan" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="people/[userId]" />
+          <Stack.Screen name="people/grid/[userGridId]" />
         </Stack.Protected>
+        {/* Friend links open in any state: before sign-in they wait for the shelf (src/friends/pendingCode.ts). */}
+        <Stack.Screen name="f/[code]" />
       </Stack>
     </SyncProvider>
   );

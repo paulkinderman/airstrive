@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { seedGridTemplates } from '@/data/seed';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** v0's schema, kept as-is so phones that ran v0 upgrade through the same path. */
 export const V1 = `
@@ -155,6 +155,16 @@ const V3 = `
   UPDATE grids SET is_official = 1 WHERE made_by = 'AirStrive' AND author_id IS NULL;
 `;
 
+/**
+ * Friends: who can see each grid and moment. A moment can match its grid's audience or
+ * be narrower. v1's unused show_moments switch becomes friends.
+ */
+const V4 = `
+  ALTER TABLE user_grids ADD COLUMN audience TEXT NOT NULL DEFAULT 'private';
+  ALTER TABLE moments ADD COLUMN audience TEXT NOT NULL DEFAULT 'private';
+  UPDATE user_grids SET audience = 'friends' WHERE show_moments = 1;
+`;
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -182,6 +192,14 @@ export async function migrate(db: SQLiteDatabase) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(V3);
       await db.execAsync('PRAGMA user_version = 3');
+    });
+    current = 3;
+  }
+
+  if (current < 4) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(V4);
+      await db.execAsync('PRAGMA user_version = 4');
     });
   }
 

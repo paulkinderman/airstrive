@@ -6,6 +6,7 @@
   "outputDirectory": "dist-site",
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/f/:code", "destination": "/f" },
     { "source": "/app/(.*)", "destination": "/app" }
   ],
   "headers": [

@@ -9,6 +9,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
 import { buildExport } from '@/lib/exportData';
 import { shareZip } from '@/lib/share';
+import { listBlocked, listFriends, unblockUser } from '@/friends/api';
+import { useLoad } from '@/friends/useLoad';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors, radius } from '@/theme';
@@ -31,6 +33,7 @@ export default function Settings() {
   const [exporting, setExporting] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { void sync.syncNow(); }, [sync.syncNow]));
+  const blocked = useLoad(() => (auth.configured ? listBlocked() : Promise.resolve([])), [auth.configured]);
 
   const syncLine = !auth.configured
     ? 'This build keeps everything on this phone only.'
@@ -45,7 +48,8 @@ export default function Settings() {
     try {
       setExporting('Getting photos from your other phones');
       await sync.syncNow();
-      const uri = await buildExport(db, auth.username ?? 'me', setExporting);
+      const friends = auth.configured ? await listFriends().catch(() => null) : null;
+      const uri = await buildExport(db, auth.username ?? 'me', setExporting, friends);
       setExporting(null);
       await shareZip(uri);
     } catch (e) {
@@ -108,7 +112,7 @@ export default function Settings() {
           <View style={styles.avatar}><Text variant="display" style={{ fontSize: 26, lineHeight: 30, color: '#fff' }}>{(auth.username ?? '?').slice(0, 1).toUpperCase()}</Text></View>
           <View style={{ flex: 1 }}>
             <Text variant="title" style={{ fontSize: 22 }}>{auth.username}</Text>
-            <Text variant="body" style={{ fontSize: 13, color: colors.muted }}>Your moments are private.</Text>
+            <Text variant="body" style={{ fontSize: 13, color: colors.muted }}>Each grid is private until you choose who can see it.</Text>
           </View>
         </View>
 
@@ -130,6 +134,18 @@ export default function Settings() {
           </Text>
           <Button label={exporting ? `${exporting}…` : 'Export my data'} kind="secondary" onPress={exportData} disabled={!!exporting} />
         </View>
+
+        {blocked.data && blocked.data.length > 0 && (
+          <View style={styles.card}>
+            <Text variant="label">Blocked</Text>
+            {blocked.data.map((b) => (
+              <View key={b.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text variant="bodyBold" style={{ flex: 1 }}>{b.username}</Text>
+                <Button label="Unblock" kind="quiet" onPress={async () => { await unblockUser(b.id).catch(() => {}); await blocked.reload(); }} />
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={[styles.card, { gap: 4 }]}>
           <Button label="Sign out" kind="quiet" onPress={signOut} style={{ alignSelf: 'flex-start' }} />

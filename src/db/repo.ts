@@ -3,6 +3,7 @@ import { SIZES, neighbours, type GridSize } from '@/data/types';
 import { startGrid } from '@/data/seed';
 import { newId, nowIso } from '@/lib/ids';
 import { photoUri } from '@/lib/files';
+import { asAudience, isWider, narrower, type Audience } from '@/friends/audience';
 import { markDirty } from './queue';
 
 export type SquareState = 'hidden' | 'revealed' | 'done';
@@ -47,6 +48,9 @@ export interface Moment {
   place: string;
   weather: string;
   withPeople: string;
+  audience: Audience;
+  /** The grid's audience; the moment's can't be wider. */
+  gridAudience: Audience;
   gridTitle: string;
   gridColor: string;
   prompt: string;
@@ -123,9 +127,9 @@ export async function listSuggestions(db: SQLiteDatabase, limit = 8): Promise<Su
 export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
   const header = await db.getFirstAsync<{
     title: string; color: string; cols: number; rows: number; freebies_left: number; completed_at: string | null; description: string;
-    grid_id: string; author_id: string | null; is_public: number; is_official: number;
+    grid_id: string; author_id: string | null; is_public: number; is_official: number; audience: string;
   }>(`SELECT g.title, g.color, g.cols, g.rows, g.description, ug.freebies_left, ug.completed_at,
-             g.id AS grid_id, g.author_id, g.is_public, g.is_official
+             g.id AS grid_id, g.author_id, g.is_public, g.is_official, ug.audience
       FROM user_grids ug JOIN grids g ON g.id = ug.grid_id WHERE ug.id = ? AND ug.deleted_at IS NULL`, userGridId);
   if (!header) return null;
 
@@ -175,6 +179,7 @@ export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
     authorId: header.author_id,
     isPublic: header.is_public === 1,
     isOfficial: header.is_official === 1,
+    audience: asAudience(header.audience),
     title: header.title,
     color: header.color,
     cols: header.cols,
@@ -248,20 +253,25 @@ export interface MomentInput {
   place: string;
   weather: string;
   withPeople: string;
+  /** Left out, a new moment takes its grid's audience and an edit keeps the moment's own. */
+  audience?: Audience;
   /** Existing photos keep their id; new ones have none. `path` is relative to the documents folder. */
   photos: { id?: string; path: string; width: number; height: number; bytes: number }[];
   coverIndex: number;
 }
 
 export async function saveMoment(db: SQLiteDatabase, squareStateId: string, input: MomentInput): Promise<WriteResult & { momentId: string }> {
-  const sq = await db.getFirstAsync<{ user_grid_id: string; idx: number }>(
-    'SELECT user_grid_id, idx FROM square_states WHERE id = ?', squareStateId,
+  const sq = await db.getFirstAsync<{ user_grid_id: string; idx: number; grid_audience: string }>(
+    `SELECT ss.user_grid_id, ss.idx, ug.audience AS grid_audience
+     FROM square_states ss JOIN user_grids ug ON ug.id = ss.user_grid_id WHERE ss.id = ?`, squareStateId,
   );
   if (!sq) throw new Error('square not found');
   const now = nowIso();
-  const existing = await db.getFirstAsync<{ id: string }>(
-    'SELECT id FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
+  const existing = await db.getFirstAsync<{ id: string; audience: string }>(
+    'SELECT id, audience FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
   );
+  const gridAudience = asAudience(sq.grid_audience);
+  const audience = narrower(input.audience ?? (existing ? asAudience(existing.audience) : gridAudience), gridAudience);
   const momentId = existing?.id ?? newId();
   const removedFiles: string[] = [];
   let completed = false;
@@ -269,14 +279,14 @@ export async function saveMoment(db: SQLiteDatabase, squareStateId: string, inpu
   await db.withTransactionAsync(async () => {
     if (existing) {
       await db.runAsync(
-        `UPDATE moments SET title = ?, body = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, updated_at = ? WHERE id = ?`,
-        input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, now, momentId,
+        `UPDATE moments SET title = ?, body = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, audience = ?, updated_at = ? WHERE id = ?`,
+        input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, now, momentId,
       );
     } else {
       await db.runAsync(
-        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        momentId, squareStateId, input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, now, now,
+        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, audience, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        momentId, squareStateId, input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, now, now,
       );
     }
     await markDirty(db, 'moments', momentId);
@@ -357,7 +367,7 @@ export async function deleteMoment(db: SQLiteDatabase, momentId: string): Promis
 
 const MOMENT_SELECT = `
   SELECT m.id, m.square_state_id, ss.user_grid_id, m.title, m.body, m.happened_on, m.place, m.weather, m.with_people,
-         g.title AS grid_title, g.color AS grid_color, gs.prompt
+         m.audience, ug.audience AS grid_audience, g.title AS grid_title, g.color AS grid_color, gs.prompt
   FROM moments m
   JOIN square_states ss ON ss.id = m.square_state_id
   JOIN user_grids ug ON ug.id = ss.user_grid_id
@@ -367,7 +377,8 @@ const MOMENT_SELECT = `
 
 type MomentRow = {
   id: string; square_state_id: string; user_grid_id: string; title: string; body: string; happened_on: string;
-  place: string; weather: string; with_people: string; grid_title: string; grid_color: string; prompt: string;
+  place: string; weather: string; with_people: string; audience: string; grid_audience: string;
+  grid_title: string; grid_color: string; prompt: string;
 };
 
 async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]> {
@@ -387,6 +398,8 @@ async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]>
       place: r.place,
       weather: r.weather,
       withPeople: r.with_people,
+      audience: narrower(asAudience(r.audience), asAudience(r.grid_audience)),
+      gridAudience: asAudience(r.grid_audience),
       gridTitle: r.grid_title,
       gridColor: r.grid_color,
       prompt: r.prompt,
@@ -416,14 +429,15 @@ export async function getMomentForSquare(db: SQLiteDatabase, squareStateId: stri
 }
 
 export async function getSquarePrompt(db: SQLiteDatabase, squareStateId: string) {
-  return db.getFirstAsync<{ prompt: string; hint: string; idx: number; title: string; color: string; user_grid_id: string }>(
-    `SELECT gs.prompt, gs.hint, ss.idx, g.title, g.color, ss.user_grid_id
+  const r = await db.getFirstAsync<{ prompt: string; hint: string; idx: number; title: string; color: string; user_grid_id: string; audience: string }>(
+    `SELECT gs.prompt, gs.hint, ss.idx, g.title, g.color, ss.user_grid_id, ug.audience
      FROM square_states ss
      JOIN user_grids ug ON ug.id = ss.user_grid_id
      JOIN grids g ON g.id = ug.grid_id
      JOIN grid_squares gs ON gs.grid_id = g.id AND gs.idx = ss.idx
      WHERE ss.id = ?`, squareStateId,
   );
+  return r ? { ...r, audience: asAudience(r.audience) } : null;
 }
 
 // ---------- Memory Lane pages ----------
@@ -541,6 +555,47 @@ export async function createGrid(db: SQLiteDatabase, userId: string, made: NewGr
 export async function setGridShared(db: SQLiteDatabase, gridId: string, shared: boolean) {
   await db.runAsync('UPDATE grids SET is_public = ?, updated_at = ? WHERE id = ? AND author_id IS NOT NULL', shared ? 1 : 0, nowIso(), gridId);
   await markDirty(db, 'grids', gridId);
+}
+
+/**
+ * Sets who can see a grid. Narrowing it narrows every moment in it. Widening it leaves the
+ * moments where they were unless `moments` is true, which brings them all to the new audience.
+ */
+export async function setGridAudience(db: SQLiteDatabase, userGridId: string, audience: Audience, moments = false) {
+  const now = nowIso();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE user_grids SET audience = ?, updated_at = ? WHERE id = ?', audience, now, userGridId);
+    await markDirty(db, 'user_grids', userGridId);
+    const rows = await db.getAllAsync<{ id: string; audience: string }>(
+      `SELECT m.id, m.audience FROM moments m JOIN square_states ss ON ss.id = m.square_state_id
+       WHERE ss.user_grid_id = ? AND m.deleted_at IS NULL`, userGridId,
+    );
+    for (const m of rows) {
+      const current = asAudience(m.audience);
+      const next = moments ? audience : narrower(current, audience);
+      if (next === current) continue;
+      await db.runAsync('UPDATE moments SET audience = ?, updated_at = ? WHERE id = ?', next, now, m.id);
+      await markDirty(db, 'moments', m.id);
+    }
+  });
+}
+
+/** Whether a grid has moments narrower than `audience`, i.e. whether widening it should ask about them. */
+export async function hasNarrowerMoments(db: SQLiteDatabase, userGridId: string, audience: Audience): Promise<boolean> {
+  const rows = await db.getAllAsync<{ audience: string }>(
+    `SELECT DISTINCT m.audience FROM moments m JOIN square_states ss ON ss.id = m.square_state_id
+     WHERE ss.user_grid_id = ? AND m.deleted_at IS NULL`, userGridId,
+  );
+  return rows.some((r) => isWider(audience, asAudience(r.audience)));
+}
+
+/** Grids on the shelf that someone other than the person can see, for their Profile. */
+export async function listSharedGrids(db: SQLiteDatabase): Promise<(ShelfGrid & { audience: Audience })[]> {
+  const shared = await db.getAllAsync<{ id: string; audience: string }>(
+    "SELECT id, audience FROM user_grids WHERE deleted_at IS NULL AND audience != 'private'",
+  );
+  const byId = new Map(shared.map((r) => [r.id, asAudience(r.audience)]));
+  return (await listShelf(db)).filter((g) => byId.has(g.userGridId)).map((g) => ({ ...g, audience: byId.get(g.userGridId)! }));
 }
 
 /**
