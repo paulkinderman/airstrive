@@ -113,9 +113,10 @@ src/
   suggest/                   the reviewed prompt bank and Suggest the rest
   friends/                   audiences, the friends and profile calls, QR codes, links
   db/schema.ts               SQLite schema and upgrades (v0 phones upgrade in place)
-  db/repo.ts                 reads and writes: shelf, board, moments, freebies, pages
+  db/repo/                   reads and writes by area: shelf, board, moments, lane, grids
   db/queue.ts                the sync queue: one entry per changed row
   sync/engine.ts             push, pull, photo upload and download, conflict rules
+  sync/tables.ts             the columns each synced table sends and receives
   sync/SyncProvider.tsx      when to sync: launch, foreground, network back, after writes
   auth/AuthProvider.tsx      Apple / Google / email sign-in, username, sign-out, deletion
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf

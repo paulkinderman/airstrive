@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { SYNCED_TABLES, getMeta, markDirty, setMeta, type SyncedTable } from '@/db/queue';
 import { checkComplete } from '@/db/repo';
 import { nowIso } from '@/lib/ids';
+import { GRID_PUSH, TABLES, columnNames, type Column } from './tables';
 
 /**
  * The sync engine. SQLite on the phone is the source of truth; this moves changes
@@ -51,23 +52,14 @@ const PULL_OVERLAP_MS = 2 * 60 * 1000;
 const BACKOFF_S = [1, 10, 60, 600, 3600];
 const GIVE_UP_MS = 7 * 24 * 3600 * 1000;
 
-const TIMESTAMPS = ['started_at', 'completed_at', 'updated_at', 'deleted_at', 'done_at', 'created_at'];
-const BOOLEANS: Record<SyncedTable, string[]> = {
-  user_grids: ['show_moments'],
-  square_states: ['via_freebie'],
-  moments: [],
-  photos: ['is_cover'],
-};
-const COLUMNS: Record<SyncedTable, string[]> = {
-  user_grids: ['id', 'grid_id', 'freebies_left', 'started_at', 'completed_at', 'show_moments', 'audience', 'updated_at', 'deleted_at'],
-  square_states: ['id', 'user_grid_id', 'idx', 'state', 'done_at', 'via_freebie', 'updated_at', 'deleted_at'],
-  moments: ['id', 'square_state_id', 'title', 'body', 'happened_on', 'place', 'weather', 'with_people', 'audience', 'created_at', 'updated_at', 'deleted_at'],
-  photos: ['id', 'moment_id', 'position', 'storage_path', 'is_cover', 'width', 'height', 'bytes', 'created_at', 'updated_at', 'deleted_at'],
-};
-
+/** A phone row as the server takes it. */
 export function toServer(table: SyncedTable, row: Row): Row {
+  return outgoing(TABLES[table], row);
+}
+
+function outgoing(columns: Column[], row: Row): Row {
   const out: Row = {};
-  for (const c of COLUMNS[table]) out[c] = BOOLEANS[table].includes(c) ? row[c] === 1 : row[c] ?? null;
+  for (const c of columns) out[c.name] = c.kind === 'bool' ? row[c.name] === 1 : row[c.name] ?? null;
   return out;
 }
 
@@ -79,14 +71,12 @@ export function normalizeTs(v: unknown): string | null {
 
 export function fromServer(table: SyncedTable, row: Row): Row {
   const out: Row = {};
-  for (const c of COLUMNS[table]) {
-    let v = row[c];
-    if (TIMESTAMPS.includes(c)) v = normalizeTs(v);
-    else if (BOOLEANS[table].includes(c)) v = v ? 1 : 0;
-    // A server from before friends has no audience; everything was private then.
-    else if (c === 'audience') v = v ?? 'private';
-    else if (v === undefined) v = null;
-    out[c] = v;
+  for (const c of TABLES[table]) {
+    let v = row[c.name];
+    if (v === undefined || (v === null && c.missing != null)) v = c.missing ?? null;
+    if (c.kind === 'timestamp') v = normalizeTs(v);
+    else if (c.kind === 'bool') v = v ? 1 : 0;
+    out[c.name] = v;
   }
   return out;
 }
@@ -112,8 +102,6 @@ async function scheduleRetry(db: SQLiteDatabase, ids: number[], error: string) {
   }
 }
 
-const GRID_COLUMNS = ['id', 'title', 'color', 'theme', 'size', 'description', 'is_public', 'updated_at'];
-
 /** Grids the person made, one call each. A grid that won't save doesn't hold up the rest. */
 async function pushGrids(db: SQLiteDatabase, remote: Remote, now: string): Promise<PushResult> {
   const queued = await db.getAllAsync<{ id: number; row_id: string; dirty_at: string }>(
@@ -126,8 +114,7 @@ async function pushGrids(db: SQLiteDatabase, remote: Remote, now: string): Promi
     const grid = await db.getFirstAsync<Row>('SELECT * FROM grids WHERE id = ?', q.row_id);
     if (!grid) { await db.runAsync('DELETE FROM sync_queue WHERE id = ?', q.id); continue; }
     const squares = await db.getAllAsync<Row>('SELECT idx, prompt, cluster FROM grid_squares WHERE grid_id = ? ORDER BY idx', q.row_id);
-    const out: Row = {};
-    for (const c of GRID_COLUMNS) out[c] = c === 'is_public' ? grid[c] === 1 : grid[c];
+    const out = outgoing(GRID_PUSH, grid);
     let result: SaveGridResult;
     try {
       result = await remote.saveGrid(out, squares);
@@ -234,7 +221,7 @@ async function applyRow(db: SQLiteDatabase, table: SyncedTable, remoteRow: Row, 
   if (local) {
     if (local.deleted_at) return false;
     if (!r.deleted_at && String(r.updated_at) < String(local.updated_at)) return false;
-    if (!r.deleted_at && COLUMNS[table].every((c) => (local[c] ?? null) === (r[c] ?? null))) return false;
+    if (!r.deleted_at && columnNames(table).every((c) => (local[c] ?? null) === (r[c] ?? null))) return false;
   }
 
   if (table === 'moments' && !r.deleted_at) {
@@ -282,7 +269,7 @@ async function retireMoment(db: SQLiteDatabase, momentId: string, files: LocalFi
 }
 
 async function upsertLocal(db: SQLiteDatabase, table: SyncedTable, r: Row, local: Row | null) {
-  const cols = [...COLUMNS[table]];
+  const cols = columnNames(table);
   const values = cols.map((c) => r[c] as string | number | null);
   if (table === 'photos') {
     // local_uri is this phone's own; a downloaded file is filled in later.
