@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { supabase } from '@/lib/supabase';
-import { getMeta, setMeta } from '@/db/queue';
+import { cachedFetch, type Cached } from '@/lib/remote';
+import { useRemote } from '@/lib/useRemote';
 import { listTemplates, getTemplate } from '@/db/repo';
 import { ensureGrids, normalizeTs } from '@/sync/engine';
 import { supabaseRemote } from '@/sync/supabaseRemote';
@@ -23,33 +24,40 @@ async function localAtlas(db: SQLiteDatabase): Promise<AtlasGrid[]> {
   return out;
 }
 
+function fromRpc(r: Record<string, unknown>): AtlasGrid {
+  return {
+    id: String(r.id), title: String(r.title), color: String(r.color), theme: String(r.theme), size: r.size as GridSize,
+    cols: Number(r.cols), rows: Number(r.rows), description: String(r.description ?? ''), madeBy: String(r.made_by ?? ''),
+    authorId: (r.author_id as string) ?? null, isOfficial: !!r.is_official, sharedAt: normalizeTs(r.shared_at),
+    starters: (r.starters as string[]) ?? [],
+  };
+}
+
 /**
  * Everything browsable in the Atlas. Fetched from the server when there's a connection
  * and kept on the phone, so the Atlas still opens offline with what it last saw (or, on a
  * phone that has never been online, the official grids it ships with).
  */
-export async function loadAtlas(db: SQLiteDatabase): Promise<{ grids: AtlasGrid[]; offline: boolean }> {
-  if (supabase) {
-    const { data, error } = await supabase.rpc('atlas_grids');
-    if (!error && Array.isArray(data)) {
-      const grids: AtlasGrid[] = data.map((r: Record<string, unknown>) => ({
-        id: String(r.id), title: String(r.title), color: String(r.color), theme: String(r.theme), size: r.size as GridSize,
-        cols: Number(r.cols), rows: Number(r.rows), description: String(r.description ?? ''), madeBy: String(r.made_by ?? ''),
-        authorId: (r.author_id as string) ?? null, isOfficial: !!r.is_official, sharedAt: normalizeTs(r.shared_at),
-        starters: (r.starters as string[]) ?? [],
-      }));
-      await setMeta(db, CACHE, JSON.stringify(grids));
-      return { grids, offline: false };
-    }
-  }
-  const cached = await getMeta(db, CACHE);
-  if (cached) return { grids: JSON.parse(cached) as AtlasGrid[], offline: !!supabase };
-  return { grids: await localAtlas(db), offline: !!supabase };
+export async function loadAtlas(db: SQLiteDatabase): Promise<Cached<AtlasGrid[]>> {
+  const client = supabase;
+  const fetcher = client
+    ? async () => {
+        const { data, error } = await client.rpc('atlas_grids');
+        if (error || !Array.isArray(data)) throw new Error(error?.message ?? 'atlas_grids returned no list');
+        return data.map(fromRpc);
+      }
+    : null;
+  return cachedFetch(db, CACHE, fetcher, () => localAtlas(db));
+}
+
+/** The Atlas for a screen: loads on focus, with refresh for pull-to-refresh. */
+export function useAtlas() {
+  return useRemote(loadAtlas);
 }
 
 /** One grid for the preview: from the Atlas if it's shared, otherwise from the phone (a private grid of your own). */
 export async function findGrid(db: SQLiteDatabase, gridId: string): Promise<AtlasGrid | null> {
-  const { grids } = await loadAtlas(db);
+  const { data: grids } = await loadAtlas(db);
   const shared = grids.find((g) => g.id === gridId);
   if (shared) return shared;
   const t = await getTemplate(db, gridId);
