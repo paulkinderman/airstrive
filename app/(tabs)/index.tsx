@@ -57,7 +57,7 @@ export default function Home() {
               <Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
             </Svg>
           </Pressable>
-          <Pressable onPress={() => router.push('/settings')} style={[styles.roundButton, styles.avatar]} accessibilityLabel="Settings">
+          <Pressable onPress={() => router.push('/profile')} style={[styles.roundButton, styles.avatar]} accessibilityLabel="Profile">
             <Text variant="title" style={{ fontSize: 18, color: '#fff' }}>{(username ?? '?').slice(0, 1).toUpperCase()}</Text>
             {sync.failed > 0 && <View style={styles.badge} />}
           </Pressable>

@@ -245,7 +245,8 @@ test('signing out removes grids people made but keeps the official ones', async 
 test('a v1 phone upgrades and marks its grids official', async () => {
   const db = new TestDb();
   await migrate(asExpo(db));
-  await db.execAsync('ALTER TABLE grids DROP COLUMN is_official; ALTER TABLE grids DROP COLUMN author_id; PRAGMA user_version = 2;');
+  await db.execAsync(`ALTER TABLE grids DROP COLUMN is_official; ALTER TABLE grids DROP COLUMN author_id;
+    ALTER TABLE user_grids DROP COLUMN audience; ALTER TABLE moments DROP COLUMN audience; PRAGMA user_version = 2;`);
   await migrate(asExpo(db));
   const r = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM grids WHERE is_official = 1');
   assert.equal(r?.n, 6);

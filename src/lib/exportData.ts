@@ -10,14 +10,18 @@ const mimeOf = (path: string) => (path.endsWith('.jpg') ? 'image/jpeg' : 'image/
 
 /**
  * Builds "AirStrive export <date>.zip" in the cache folder: moments.json with every grid
- * and moment, photos/ at their stored size, and memory-lane.pdf rendered from the pages
- * (memory-lane.html on the web, ready to print). Returns the zip's URI for shareZip.
+ * and moment, photos/ at their stored size, memory-lane.pdf rendered from the pages
+ * (memory-lane.html on the web, ready to print), and friends.json when the friends list
+ * could be fetched. Returns the zip's URI for shareZip.
  */
-export async function buildExport(db: SQLiteDatabase, username: string, onStep?: (step: string) => void): Promise<string> {
+export async function buildExport(
+  db: SQLiteDatabase, username: string, onStep?: (step: string) => void,
+  friends?: { username: string; since: string }[] | null,
+): Promise<string> {
   onStep?.('Gathering your grids');
   const grids = await db.getAllAsync<{
-    id: string; title: string; size: string; theme: string; started_at: string; completed_at: string | null; freebies_left: number;
-  }>(`SELECT ug.id, g.title, g.size, g.theme, ug.started_at, ug.completed_at, ug.freebies_left
+    id: string; title: string; size: string; theme: string; started_at: string; completed_at: string | null; freebies_left: number; audience: string;
+  }>(`SELECT ug.id, g.title, g.size, g.theme, ug.started_at, ug.completed_at, ug.freebies_left, ug.audience
       FROM user_grids ug JOIN grids g ON g.id = ug.grid_id WHERE ug.deleted_at IS NULL ORDER BY ug.started_at`);
   const squares = await db.getAllAsync<{
     user_grid_id: string; idx: number; prompt: string; cluster: string; state: string; done_at: string | null; via_freebie: number;
@@ -48,7 +52,7 @@ export async function buildExport(db: SQLiteDatabase, username: string, onStep?:
     }
     moments.push({
       id: m.id, grid: m.gridTitle, prompt: m.prompt, title: m.title, body: m.body, happened_on: m.happenedOn,
-      place: m.place, weather: m.weather, with_people: m.withPeople, photos: names,
+      place: m.place, weather: m.weather, with_people: m.withPeople, audience: m.audience, photos: names,
     });
   }
 
@@ -58,6 +62,7 @@ export async function buildExport(db: SQLiteDatabase, username: string, onStep?:
     username,
     grids: grids.map((g) => ({
       title: g.title, size: g.size, theme: g.theme, started_at: g.started_at, completed_at: g.completed_at, freebies_left: g.freebies_left,
+      audience: g.audience,
       squares: squares.filter((s) => s.user_grid_id === g.id).map((s) => ({
         index: s.idx, prompt: s.prompt, cluster: s.cluster, state: s.state, done_at: s.done_at, freebie: s.via_freebie === 1,
       })),
@@ -66,6 +71,7 @@ export async function buildExport(db: SQLiteDatabase, username: string, onStep?:
     ...(missing.length ? { photos_not_on_this_phone: missing } : {}),
   };
   zip.file('moments.json', JSON.stringify(json, null, 2));
+  if (friends) zip.file('friends.json', JSON.stringify(friends.map((f) => ({ username: f.username, friends_since: f.since })), null, 2));
 
   onStep?.('Printing Memory Lane');
   const dataUri = async (path: string | null) => {

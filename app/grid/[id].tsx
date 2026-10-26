@@ -15,6 +15,8 @@ import { Button } from '@/ui/Button';
 import { Menu, type MenuItem } from '@/ui/Menu';
 import { useWideLayout } from '@/ui/wide';
 import { WideGrid } from '@/wide/WideGrid';
+import { GridAudienceMenu } from '@/friends/GridAudienceMenu';
+import { AUDIENCE_LABEL, gridAudienceLine } from '@/friends/audience';
 import { colors, radius } from '@/theme';
 
 type Board = NonNullable<Awaited<ReturnType<typeof loadBoard>>>;
@@ -32,6 +34,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [selected, setSelected] = useState<string | null>(select ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [audienceOpen, setAudienceOpen] = useState(false);
   const sync = useSync();
   const { userId } = useAuth();
   const version = useDataVersion();
@@ -94,6 +97,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
   };
 
   const menuItems: MenuItem[] = [
+    { label: `Who can see this: ${AUDIENCE_LABEL[board.audience]}`, onPress: () => setAudienceOpen(true) },
     ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
     { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
     { label: 'Remove from your grids', destructive: true, onPress: onRemove },
@@ -129,6 +133,11 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
           <Text variant="body" style={{ fontSize: 14, color: colors.muted }}>
             {doneCount} moment{doneCount === 1 ? '' : 's'} · {revealedCount} revealed · {board.freebiesLeft} freebie{board.freebiesLeft === 1 ? '' : 's'} left
           </Text>
+          {board.audience !== 'private' && (
+            <Pressable onPress={() => setAudienceOpen(true)} accessibilityRole="button">
+              <Text variant="caption" style={{ color: colors.accentDeep, fontFamily: 'Nunito_700Bold' }}>{gridAudienceLine(board.audience)}</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap }}>
@@ -187,10 +196,11 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
       <Menu
         visible={menuOpen}
         title={board.title}
-        note={mine ? (board.isPublic ? 'Shared to the Atlas. People who added it keep it if you stop sharing.' : 'Only you can see this grid.') : undefined}
+        note={mine ? (board.isPublic ? 'Its squares are in the Atlas. People who added it keep it if you stop sharing.' : 'Its squares are only on your shelf.') : undefined}
         items={menuItems}
         onClose={() => setMenuOpen(false)}
       />
+      <GridAudienceMenu visible={audienceOpen} userGridId={id} current={board.audience} onClose={() => setAudienceOpen(false)} onChanged={reload} />
     </View>
   );
 }

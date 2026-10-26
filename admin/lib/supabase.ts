@@ -42,7 +42,11 @@ export type ReportRow = {
   reason: string;
   note: string;
   created_at: string;
-  grid_id: string;
+  target_kind: 'grid' | 'moment' | 'user';
+  grid_id: string | null;
+  moment_id: string | null;
+  user_id: string | null;
+  reported: { username: string | null; sharing_suspended: boolean } | null;
   reporter: { username: string | null } | null;
   grid: {
     id: string;
@@ -54,6 +58,18 @@ export type ReportRow = {
     rows: number;
     is_hidden: boolean;
   } | null;
+};
+
+/** What admin_moment() returns for a reported moment. */
+export type ReportedMoment = {
+  id: string;
+  title: string;
+  body: string;
+  happened_on: string;
+  owner: string | null;
+  grid: string;
+  hidden: boolean;
+  photos: string[];
 };
 
 export type GridRow = {

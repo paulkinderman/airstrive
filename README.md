@@ -10,6 +10,14 @@ This is **v2**: everything in v1 (Sign in with Apple, sync between phones throug
 - **Share to the Atlas**, stop sharing, and remove a grid from your shelf (only grids with no moments).
 - **Moderation.** Reports, and a small admin site in `admin/` to hide grids and suspend sharing. Two hides in 30 days suspends sharing automatically.
 
+And friends:
+
+- **Profile tab.** Your username, a line about you, the grids you share, your friends and friend requests, and Settings.
+- **Friends** are mutual. Add someone by searching their username (three letters or more) and sending a request, or in person with your QR code or a link (each works once; links last 7 days). Remove and block are silent.
+- **Audiences.** Every grid is Private, Friends or Public (anyone on AirStrive who opens your profile), and each moment in it can match the grid or be narrower. Everything starts Private. Place, weather and who you were with are never shown to anyone else.
+- **Someone's profile** shows the grids that reach you, read-only, with the moments you're allowed to see. There's no feed, and nothing is counted or ranked.
+- **Reports** on moments and people, beside grid reports in the admin site, which can hide a moment or suspend someone's sharing.
+
 The phone's SQLite database stays the source of truth, so everything works offline; the Atlas shows what it last fetched.
 
 ## Run it on your phone
@@ -92,11 +100,18 @@ app/                         screens (expo-router)
   moment/[squareId].tsx      log or edit a moment (photos, journal, date, chips)
   lane/[momentId].tsx        scrapbook page with polaroids and handwriting
   lane/chapter/[userGridId]  chapter cover: the finished mosaic, print as poster
-  settings.tsx               backup status, export, sign out, delete account
+  settings.tsx               backup status, export, blocked people, sign out, delete account
+  (tabs)/profile.tsx         Profile: bio, friends and requests, grids you share
+  friends/                   add a friend (username search), my QR code and link, scan a code
+  f/[code].tsx               where a friend link or scanned code lands, signed in or not
+  people/[userId].tsx        someone's profile: add, accept, remove, block, report
+  people/grid/[userGridId]   someone's grid, read-only, with the moments shared with you
+  report/moment, report/user report a moment or a person
 src/
   data/                      the six starter grids (424 prompts), sizes, placement, seeding, adopting
   atlas/                     themes and interests, picks, the Atlas catalog, the preview
   suggest/                   the reviewed prompt bank and Suggest the rest
+  friends/                   audiences, the friends and profile calls, QR codes, links
   db/schema.ts               SQLite schema and upgrades (v0 phones upgrade in place)
   db/repo.ts                 reads and writes: shelf, board, moments, freebies, pages
   db/queue.ts                the sync queue: one entry per changed row
@@ -106,7 +121,7 @@ src/
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf
   lib/printables.ts          HTML for the poster and the scrapbook PDF
   lib/*.web.ts               browser versions: photos in IndexedDB, printing and downloads, dialogs
-website/                     landing page and privacy page (static HTML)
+website/                     landing page, privacy page and the /f/<code> friend link page (static HTML)
 supabase/
   migrations/                tables, row-level security, triggers, starter grid seed
   functions/delete-account   deletes photos, rows and the auth user
@@ -125,6 +140,11 @@ scripts/starter-sql.ts       regenerates the starter grid seed from src/data
 - When every square is done, a chapter cover joins Memory Lane. Removing a moment from a finished grid takes it away again.
 - A grid someone makes is private until they share it. Its squares are fixed once it is saved, so everyone who adds it plays the same board; the title, color, theme, description and sharing can still change.
 - Stopping sharing or hiding a grid takes it out of the Atlas; people who already added it keep it.
+- Sharing a grid to the Atlas shares its squares. Who sees your moments is the grid's audience, set separately.
+- A moment is seen as the narrower of its own audience and its grid's. Narrowing a grid narrows its moments; widening it asks whether to bring the moments along.
+- Other people's grids and moments never enter the phone's database. They are read from the server when a screen opens, through functions that return only what the viewer may see; every check goes through `can_view()` in Postgres, and photo files are readable only while their moment is.
+- A blocked pair can't find or see each other. A request to someone who blocked you looks sent but never arrives.
+- Someone whose sharing is suspended reaches friends at most. Two hidden moments in 30 days suspends it automatically.
 
 ## Sync
 

@@ -12,6 +12,8 @@ import { useSync } from '@/sync/SyncProvider';
 import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
+import { AudiencePicker } from '@/friends/AudiencePicker';
+import { narrower, type Audience } from '@/friends/audience';
 import { colors, fonts, radius } from '@/theme';
 
 const MAX_PHOTOS = 6;
@@ -25,7 +27,7 @@ export default function MomentSheet() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [meta, setMeta] = useState<{ prompt: string; idx: number; title: string; color: string } | null>(null);
+  const [meta, setMeta] = useState<{ prompt: string; idx: number; title: string; color: string; audience: Audience } | null>(null);
   const [momentId, setMomentId] = useState<string | null>(null);
   const [body, setBody] = useState('');
   const [happenedOn, setHappenedOn] = useState(todayLocal());
@@ -34,6 +36,8 @@ export default function MomentSheet() {
   const [withPeople, setWithPeople] = useState('');
   const [photos, setPhotos] = useState<SheetPhoto[]>([]);
   const [cover, setCover] = useState(0);
+  // null until loaded: a new moment starts with its grid's audience.
+  const [audience, setAudience] = useState<Audience | null>(null);
   const [saving, setSaving] = useState(false);
   const sync = useSync();
   // Files added on this sheet that aren't saved yet; removed if the sheet closes without saving.
@@ -52,8 +56,9 @@ export default function MomentSheet() {
   useEffect(() => {
     (async () => {
       const m = await getSquarePrompt(db, squareId);
-      if (m) setMeta({ prompt: m.prompt, idx: m.idx, title: m.title, color: m.color });
+      if (m) setMeta({ prompt: m.prompt, idx: m.idx, title: m.title, color: m.color, audience: m.audience });
       const existing = await getMomentForSquare(db, squareId);
+      setAudience(existing ? existing.audience : m?.audience ?? 'private');
       if (existing) {
         setMomentId(existing.id);
         setBody(existing.body);
@@ -91,6 +96,7 @@ export default function MomentSheet() {
     const r = await saveMoment(db, squareId, {
       title: meta.prompt, body: body.trim(), happenedOn, place: place.trim(), weather: weather.trim(),
       withPeople: withPeople.trim(), photos, coverIndex: Math.min(cover, Math.max(0, photos.length - 1)),
+      audience: narrower(audience ?? meta.audience, meta.audience),
     });
     saved.current = true;
     removeFiles(r.removedFiles);
@@ -196,6 +202,18 @@ export default function MomentSheet() {
           <Chip icon="sun" value={weather} onChange={setWeather} placeholder="Weather" />
           <Chip icon="people" value={withPeople} onChange={setWithPeople} placeholder="With someone" />
         </View>
+
+        {audience && (
+          <View style={{ gap: 8 }}>
+            <Text variant="label">Who can see this</Text>
+            <AudiencePicker value={narrower(audience, meta.audience)} onChange={setAudience} max={meta.audience} color={meta.color} />
+            <Text variant="caption">
+              {meta.audience === 'private'
+                ? 'This grid is private. Choose who can see it from the grid\'s menu.'
+                : 'A moment can be shared as widely as its grid, or kept narrower. Place, weather and who you were with stay private.'}
+            </Text>
+          </View>
+        )}
 
         {momentId && (
           <Pressable onPress={remove} style={{ paddingVertical: 10 }}>

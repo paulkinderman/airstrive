@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>A friend invite · AirStrive</title>
+  <meta name="description" content="Someone wants to be friends on AirStrive.">
+  <meta name="theme-color" content="#F5B61C">
+  <meta property="og:title" content="Be friends on AirStrive">
+  <meta property="og:description" content="Fill in grids of small experiences, one square at a time, and see the moments your friends share.">
+  <meta property="og:image" content="/icon-512.png">
+  <link rel="icon" type="image/png" href="/icon-512.png">
+  <link rel="apple-touch-icon" href="/icon-512.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Fredoka:wght@600&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="36" height="36"><span>Air<b>Strive</b></span></a>
+  </header>
+
+  <main class="wrap doc">
+    <h1>Someone wants to be friends</h1>
+    <p>Friends on AirStrive see the grids and moments each of you chooses to share with friends. Nothing private is shared, and either of you can remove the other at any time.</p>
+    <p id="actions">
+      <a class="btn" id="open-app" href="#">Open in the AirStrive app</a>
+      <a class="btn small" id="open-web" href="/app/">Open in your browser</a>
+    </p>
+    <p class="updated" id="note">New to AirStrive? Open it in your browser and sign in; the invite waits for you.</p>
+  </main>
+
+  <script>
+    // /f/<code>: the QR code and "Share my link" both point here (src/friends/links.ts).
+    // The app opens airstrive://f/<code>; the web app has the same screen at /app/f/<code>.
+    var code = (location.pathname.match(/\/f\/([A-Za-z0-9]{12})\/?$/) || [])[1];
+    if (code) {
+      document.getElementById('open-app').href = 'airstrive://f/' + code;
+      document.getElementById('open-web').href = '/app/f/' + code;
+    } else {
+      document.querySelector('h1').textContent = "This invite link isn't complete";
+      document.getElementById('actions').hidden = true;
+      document.getElementById('note').textContent = 'Ask your friend to send it again, or find them by username in AirStrive.';
+    }
+  </script>
+</body>
+</html>

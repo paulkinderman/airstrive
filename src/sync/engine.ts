@@ -59,9 +59,9 @@ const BOOLEANS: Record<SyncedTable, string[]> = {
   photos: ['is_cover'],
 };
 const COLUMNS: Record<SyncedTable, string[]> = {
-  user_grids: ['id', 'grid_id', 'freebies_left', 'started_at', 'completed_at', 'show_moments', 'updated_at', 'deleted_at'],
+  user_grids: ['id', 'grid_id', 'freebies_left', 'started_at', 'completed_at', 'show_moments', 'audience', 'updated_at', 'deleted_at'],
   square_states: ['id', 'user_grid_id', 'idx', 'state', 'done_at', 'via_freebie', 'updated_at', 'deleted_at'],
-  moments: ['id', 'square_state_id', 'title', 'body', 'happened_on', 'place', 'weather', 'with_people', 'created_at', 'updated_at', 'deleted_at'],
+  moments: ['id', 'square_state_id', 'title', 'body', 'happened_on', 'place', 'weather', 'with_people', 'audience', 'created_at', 'updated_at', 'deleted_at'],
   photos: ['id', 'moment_id', 'position', 'storage_path', 'is_cover', 'width', 'height', 'bytes', 'created_at', 'updated_at', 'deleted_at'],
 };
 
@@ -83,6 +83,8 @@ export function fromServer(table: SyncedTable, row: Row): Row {
     let v = row[c];
     if (TIMESTAMPS.includes(c)) v = normalizeTs(v);
     else if (BOOLEANS[table].includes(c)) v = v ? 1 : 0;
+    // A server from before friends has no audience; everything was private then.
+    else if (c === 'audience') v = v ?? 'private';
     else if (v === undefined) v = null;
     out[c] = v;
   }

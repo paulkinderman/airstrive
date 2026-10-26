@@ -1,6 +1,8 @@
-import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import { takePendingCode } from '@/friends/pendingCode';
 import { colors, fonts } from '@/theme';
 
 function GridsIcon({ color }: { color: ColorValue }) {
@@ -32,7 +34,24 @@ function AtlasIcon({ color }: { color: ColorValue }) {
   );
 }
 
+function ProfileIcon({ color }: { color: ColorValue }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={String(color)} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx={12} cy={8} r={4} />
+      <Path d="M4 21a8 8 0 0 1 16 0" />
+    </Svg>
+  );
+}
+
 export default function TabsLayout() {
+  const router = useRouter();
+
+  // A friend link opened before signing in picks up here once the shelf is ready.
+  useEffect(() => {
+    const code = takePendingCode();
+    if (code) router.push({ pathname: '/f/[code]', params: { code } });
+  }, [router]);
+
   return (
     <Tabs
       screenOptions={{
@@ -47,6 +66,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Grids', tabBarIcon: GridsIcon }} />
       <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon }} />
       <Tabs.Screen name="atlas" options={{ title: 'Atlas', tabBarIcon: AtlasIcon }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon }} />
     </Tabs>
   );
 }
