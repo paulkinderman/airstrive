@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import type { Database, TablesInsert } from '@/db/database.types';
 import type { SquareState } from '@/db/repo';
 import type { ReportReason } from '@/atlas/catalog';
 import { asAudience, type Audience } from './audience';
@@ -59,8 +60,9 @@ function client() {
   return supabase;
 }
 
-async function rpc<T>(fn: string, args?: Row): Promise<T> {
-  const { data, error } = await client().rpc(fn, args);
+/** Function names are checked against the generated types; arguments and results are cast here. */
+async function rpc<T>(fn: keyof Database['public']['Functions'], args?: Row): Promise<T> {
+  const { data, error } = await client().rpc(fn, args as never);
   if (error) throw new Error(error.message);
   return data as T;
 }
@@ -190,7 +192,7 @@ export async function myBio(): Promise<string> {
 
 // ---------- reports ----------
 
-async function report(row: Row): Promise<'ok' | 'already' | 'error'> {
+async function report(row: TablesInsert<'reports'>): Promise<'ok' | 'already' | 'error'> {
   if (!supabase) return 'error';
   const { error } = await supabase.from('reports').insert(row);
   if (!error) return 'ok';
