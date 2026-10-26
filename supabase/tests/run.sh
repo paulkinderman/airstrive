@@ -12,3 +12,4 @@ for f in "$here"/../migrations/*.sql; do run "$f"; done
 run "$here/rls_and_sync.sql"
 run "$here/atlas.sql"
 run "$here/friends.sql"
+run "$here/groups.sql"
