@@ -56,7 +56,8 @@
     "test:db": "bash supabase/tests/run.sh",
     "test:integration": "bash test/integration/run.sh",
     "starter-sql": "tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql",
-    "build:site": "bash scripts/build-site.sh"
+    "build:site": "bash scripts/build-site.sh",
+    "gen:types": "bash scripts/gen-types.sh"
   },
   "private": true
 }

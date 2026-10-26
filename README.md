@@ -53,7 +53,7 @@ Backend, once per Supabase project:
 
 ```sh
 supabase link --project-ref <ref>
-supabase db push                          # supabase/migrations
+supabase db push                          # supabase/migrations (then npm run gen:types to refresh src/db/database.types.ts)
 supabase functions deploy delete-account
 ```
 
@@ -128,6 +128,7 @@ src/
   db/queue.ts                the sync queue: one entry per changed row
   sync/engine.ts             push, pull, photo upload and download, conflict rules
   sync/tables.ts             the columns each synced table sends and receives
+  db/database.types.ts       generated types for the Supabase tables and functions (npm run gen:types)
   sync/SyncProvider.tsx      when to sync: launch, foreground, network back, after writes
   auth/AuthProvider.tsx      Apple / Google / email sign-in, username, sign-out, deletion
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf

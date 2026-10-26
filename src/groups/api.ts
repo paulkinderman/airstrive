@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/db/database.types';
 import { purgeGroup, type LocalFiles } from '@/sync/engine';
 
 /**
@@ -25,8 +26,9 @@ function client() {
   return supabase;
 }
 
-async function rpc<T>(fn: string, args?: Row): Promise<T> {
-  const { data, error } = await client().rpc(fn, args);
+/** Function names are checked against the generated types; arguments and results are cast here. */
+async function rpc<T>(fn: keyof Database['public']['Functions'], args?: Row): Promise<T> {
+  const { data, error } = await client().rpc(fn, args as never);
   if (error) throw new Error(error.message);
   return data as T;
 }
