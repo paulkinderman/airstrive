@@ -7,6 +7,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { listSharedGrids } from '@/db/repo';
 import { listFriends, listRequests, myBio, respondRequest, saveBio, type Friend, type FriendRequest } from '@/friends/api';
 import { AUDIENCE_LABEL } from '@/friends/audience';
+import { listGroupInvites, respondGroupInvite, type GroupInvite } from '@/groups/api';
 import { useLoad } from '@/friends/useLoad';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
@@ -35,15 +36,31 @@ export default function ProfileTab() {
   useFocusEffect(useCallback(() => { listSharedGrids(db).then(setShared); }, [db, version]));
 
   const people = useLoad(async () => {
-    if (!auth.configured) return { friends: [] as Friend[], requests: [] as FriendRequest[] };
-    const [friends, requests, b] = await Promise.all([listFriends(), listRequests(), myBio()]);
+    if (!auth.configured) return { friends: [] as Friend[], requests: [] as FriendRequest[], invites: [] as GroupInvite[] };
+    const [friends, requests, b, invites] = await Promise.all([
+      listFriends(), listRequests(), myBio(), listGroupInvites().catch(() => [] as GroupInvite[]),
+    ]);
     setBio(b);
-    return { friends, requests };
+    return { friends, requests, invites };
   }, [auth.configured]);
 
   const respond = async (r: FriendRequest, accept: boolean) => {
     setBusy(r.id);
     try { await respondRequest(r.id, accept); } catch { /* shown by the reload */ }
+    setBusy(null);
+    await people.reload();
+  };
+
+  const answerInvite = async (inv: GroupInvite, accept: boolean) => {
+    setBusy(inv.groupId);
+    try {
+      await respondGroupInvite(inv.groupId, accept);
+      if (accept) {
+        await sync.syncNow();
+        const here = await db.getFirstAsync('SELECT 1 AS x FROM user_grids WHERE id = ? AND deleted_at IS NULL', inv.groupId);
+        if (here) router.push({ pathname: '/grid/[id]', params: { id: inv.groupId } });
+      }
+    } catch { /* shown by the reload */ }
     setBusy(null);
     await people.reload();
   };
@@ -60,6 +77,7 @@ export default function ProfileTab() {
 
   const friends = people.data?.friends ?? [];
   const requests = people.data?.requests ?? [];
+  const invites = people.data?.invites ?? [];
 
   return (
     <ScrollView style={{ backgroundColor: colors.paper }} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 40, gap: 14 }}>
@@ -124,6 +142,22 @@ export default function ProfileTab() {
                   <Text variant="bodyBold" style={{ flex: 1 }}>{r.username}</Text>
                   <Button label="Accept" onPress={() => respond(r, true)} disabled={busy === r.id} style={styles.smallButton} />
                   <Button label="Not now" kind="quiet" onPress={() => respond(r, false)} disabled={busy === r.id} />
+                </View>
+              ))}
+            </Section>
+          )}
+
+          {invites.length > 0 && (
+            <Section title="Grids to do together">
+              {invites.map((inv) => (
+                <View key={inv.groupId} style={styles.row}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: inv.color }} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text variant="bodyBold">{inv.title}</Text>
+                    <Text variant="caption" style={{ color: colors.muted }}>{inv.from} invited you</Text>
+                  </View>
+                  <Button label="Join" onPress={() => answerInvite(inv, true)} disabled={busy === inv.groupId} style={styles.smallButton} />
+                  <Button label="No thanks" kind="quiet" onPress={() => answerInvite(inv, false)} disabled={busy === inv.groupId} />
                 </View>
               ))}
             </Section>

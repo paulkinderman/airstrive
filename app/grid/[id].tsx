@@ -17,6 +17,8 @@ import { useWideLayout } from '@/ui/wide';
 import { WideGrid } from '@/wide/WideGrid';
 import { GridAudienceMenu } from '@/friends/GridAudienceMenu';
 import { AUDIENCE_LABEL, gridAudienceLine } from '@/friends/audience';
+import { startTogether } from '@/groups/startTogether';
+import { useTogetherLine } from '@/groups/useTogetherLine';
 import { colors, radius } from '@/theme';
 
 type Board = NonNullable<Awaited<ReturnType<typeof loadBoard>>>;
@@ -36,8 +38,9 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [audienceOpen, setAudienceOpen] = useState(false);
   const sync = useSync();
-  const { userId } = useAuth();
+  const { userId, configured } = useAuth();
   const version = useDataVersion();
+  const together = useTogetherLine(board?.groupId ?? null);
 
   const reload = useCallback(async () => {
     const b = await loadBoard(db, id);
@@ -96,8 +99,15 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
     reload();
   };
 
-  const menuItems: MenuItem[] = [
+  const openTogether = () => router.push({ pathname: '/together/[groupId]', params: { groupId: id } });
+  const menuItems: MenuItem[] = board.groupId ? [
+    { label: 'People in this grid', onPress: openTogether },
+    ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
+    { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
+    { label: 'Leave this grid', destructive: true, onPress: openTogether },
+  ] : [
     { label: `Who can see this: ${AUDIENCE_LABEL[board.audience]}`, onPress: () => setAudienceOpen(true) },
+    ...(configured ? [{ label: 'Do this together', onPress: () => void startTogether(db, router, id) }] : []),
     ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
     { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
     { label: 'Remove from your grids', destructive: true, onPress: onRemove },
@@ -133,7 +143,11 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
           <Text variant="body" style={{ fontSize: 14, color: colors.muted }}>
             {doneCount} moment{doneCount === 1 ? '' : 's'} · {revealedCount} revealed · {board.freebiesLeft} freebie{board.freebiesLeft === 1 ? '' : 's'} left
           </Text>
-          {board.audience !== 'private' && (
+          {together ? (
+            <Pressable onPress={openTogether} accessibilityRole="button">
+              <Text variant="caption" style={{ color: colors.accentDeep, fontFamily: 'Nunito_700Bold' }}>{together === 'Just you so far' ? 'Just you so far · invite a friend' : `${together} · only the group sees this grid`}</Text>
+            </Pressable>
+          ) : board.audience !== 'private' && (
             <Pressable onPress={() => setAudienceOpen(true)} accessibilityRole="button">
               <Text variant="caption" style={{ color: colors.accentDeep, fontFamily: 'Nunito_700Bold' }}>{gridAudienceLine(board.audience)}</Text>
             </Pressable>
@@ -211,7 +225,13 @@ function DoneDetail({ square }: { square: BoardSquare }) {
   useFocusEffect(
     useCallback(() => {
       if (!square.momentId) { setLine('Completed with a freebie. You can still add a moment.'); return; }
-      db.getFirstAsync<{ happened_on: string; body: string }>('SELECT happened_on, body FROM moments WHERE id = ?', square.momentId)
+      // A group moment's words are in its entries.
+      db.getFirstAsync<{ happened_on: string; body: string }>(
+        `SELECT m.happened_on, CASE WHEN m.group_id IS NULL THEN m.body ELSE COALESCE((
+           SELECT e.body FROM moment_entries e WHERE e.moment_id = m.id AND e.deleted_at IS NULL AND e.body != ''
+           ORDER BY e.created_at LIMIT 1), '') END AS body
+         FROM moments m WHERE m.id = ?`, square.momentId,
+      )
         .then((m) => m && setLine(`${shortDate(m.happened_on)}${m.body ? ' · ' + m.body.slice(0, 90) + (m.body.length > 90 ? '…' : '') : ''}`));
     }, [db, square.momentId]),
   );

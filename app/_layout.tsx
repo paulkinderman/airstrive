@@ -87,6 +87,8 @@ function Routes() {
           <Stack.Screen name="friends/scan" options={{ presentation: 'modal' }} />
           <Stack.Screen name="people/[userId]" />
           <Stack.Screen name="people/grid/[userGridId]" />
+          <Stack.Screen name="together/start" />
+          <Stack.Screen name="together/[groupId]" />
         </Stack.Protected>
         {/* Friend links open in any state: before sign-in they wait for the shelf (src/friends/pendingCode.ts). */}
         <Stack.Screen name="f/[code]" />

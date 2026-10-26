@@ -18,6 +18,8 @@ import { Button } from '@/ui/Button';
 import { Menu, type MenuItem } from '@/ui/Menu';
 import { GridAudienceMenu } from '@/friends/GridAudienceMenu';
 import { AUDIENCE_LABEL, gridAudienceLine } from '@/friends/audience';
+import { startTogether } from '@/groups/startTogether';
+import { useTogetherLine } from '@/groups/useTogetherLine';
 import { colors, fonts, radius } from '@/theme';
 import { Mosaic } from './Mosaic';
 
@@ -42,8 +44,9 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
   const [mosaic, setMosaic] = useState(false);
   const [focused, setFocused] = useState(false);
   const sync = useSync();
-  const { userId } = useAuth();
+  const { userId, configured } = useAuth();
   const version = useDataVersion();
+  const together = useTogetherLine(board?.groupId ?? null);
 
   const reload = useCallback(async () => {
     const b = await loadBoard(db, id);
@@ -131,8 +134,15 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
     ]);
   };
   const onShare = async () => { await setGridShared(db, board.gridId, !board.isPublic); sync.request(); reload(); };
-  const menuItems: MenuItem[] = [
+  const openTogether = () => router.push({ pathname: '/together/[groupId]', params: { groupId: id } });
+  const menuItems: MenuItem[] = board.groupId ? [
+    { label: 'People in this grid', onPress: openTogether },
+    ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
+    { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
+    { label: 'Leave this grid', destructive: true, onPress: openTogether },
+  ] : [
     { label: `Who can see this: ${AUDIENCE_LABEL[board.audience]}`, onPress: () => setAudienceOpen(true) },
+    ...(configured ? [{ label: 'Do this together', onPress: () => void startTogether(db, router, id) }] : []),
     ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
     { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
     { label: 'Remove from your grids', destructive: true, onPress: onRemove },
@@ -176,7 +186,11 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
             <Text variant="body" style={{ fontSize: 15, color: colors.muted }}>
               {doneCount} moment{doneCount === 1 ? '' : 's'} · {revealedCount} revealed · {board.freebiesLeft} freebie{board.freebiesLeft === 1 ? '' : 's'} left
             </Text>
-            {board.audience !== 'private' && (
+            {together ? (
+              <Pressable onPress={openTogether} accessibilityRole="button">
+                <Text variant="caption" style={{ color: colors.accentDeep, fontFamily: 'Nunito_700Bold' }}>{together === 'Just you so far' ? 'Just you so far · invite a friend' : `${together} · only the group sees this grid`}</Text>
+              </Pressable>
+            ) : board.audience !== 'private' && (
               <Pressable onPress={() => setAudienceOpen(true)} accessibilityRole="button">
                 <Text variant="caption" style={{ color: colors.accentDeep, fontFamily: 'Nunito_700Bold' }}>{gridAudienceLine(board.audience)}</Text>
               </Pressable>

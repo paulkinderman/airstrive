@@ -147,7 +147,17 @@ type MomentRow = {
 
 async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]> {
   const out: Moment[] = [];
+  const me = rows.some((r) => r.group_id)
+    ? (await db.getFirstAsync<{ value: string }>("SELECT value FROM meta WHERE key = 'owner'"))?.value ?? null
+    : null;
   for (const r of rows) {
+    const entries = r.group_id
+      ? await db.getAllAsync<{ user_id: string | null; body: string; username: string | null }>(
+        `SELECT e.user_id, e.body, gp.username FROM moment_entries e
+         LEFT JOIN group_people gp ON gp.group_id = e.group_id AND gp.user_id = e.user_id
+         WHERE e.moment_id = ? AND e.deleted_at IS NULL AND e.body != '' ORDER BY e.created_at`, r.id,
+      )
+      : [];
     const photos = await db.getAllAsync<{ id: string; local_uri: string; is_cover: number; width: number; height: number }>(
       `SELECT id, local_uri, is_cover, width, height FROM photos
        WHERE moment_id = ? AND deleted_at IS NULL AND local_uri != '' ORDER BY position`, r.id,
@@ -163,6 +173,9 @@ async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]>
       weather: r.weather,
       withPeople: r.with_people,
       groupId: r.group_id,
+      entries: entries.map((e) => ({
+        name: e.user_id && e.user_id === me ? 'You' : e.username ?? 'A former member', body: e.body, mine: !!me && e.user_id === me,
+      })),
       audience: narrower(asAudience(r.audience), asAudience(r.grid_audience)),
       gridAudience: asAudience(r.grid_audience),
       gridTitle: r.grid_title,

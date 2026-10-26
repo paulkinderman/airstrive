@@ -9,9 +9,9 @@ import type { BoardSquare, SquareState, WriteResult } from './types';
 export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
   const header = await db.getFirstAsync<{
     title: string; color: string; cols: number; rows: number; freebies_left: number; completed_at: string | null; description: string;
-    grid_id: string; author_id: string | null; is_public: number; is_official: number; audience: string;
+    grid_id: string; author_id: string | null; is_public: number; is_official: number; audience: string; group_id: string | null;
   }>(`SELECT g.title, g.color, g.cols, g.rows, g.description, ug.freebies_left, ug.completed_at,
-             g.id AS grid_id, g.author_id, g.is_public, g.is_official, ug.audience
+             g.id AS grid_id, g.author_id, g.is_public, g.is_official, ug.audience, ug.group_id
       FROM user_grids ug JOIN grids g ON g.id = ug.grid_id WHERE ug.id = ? AND ug.deleted_at IS NULL`, userGridId);
   if (!header) return null;
 
@@ -62,6 +62,8 @@ export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
     isPublic: header.is_public === 1,
     isOfficial: header.is_official === 1,
     audience: asAudience(header.audience),
+    /** Set when this is a group grid: friends doing it together (src/groups). */
+    groupId: header.group_id,
     title: header.title,
     color: header.color,
     cols: header.cols,
