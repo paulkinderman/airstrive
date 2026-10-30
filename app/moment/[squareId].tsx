@@ -10,6 +10,7 @@ import { getMomentForSquare, getSquarePrompt, saveMoment, deleteMoment } from '@
 import { pickFromLibrary, takePhoto, type StoredPhoto } from '@/lib/photos';
 import { removeFiles } from '@/lib/files';
 import { useSync } from '@/sync/SyncProvider';
+import { emitDataChanged } from '@/sync/events';
 import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
@@ -116,6 +117,8 @@ function MomentSheet({ squareId }: { squareId: string }) {
     });
     saved.current = true;
     removeFiles(r.removedFiles);
+    // Screens underneath show this moment; refresh them now rather than on the next pick.
+    emitDataChanged();
     sync.request();
     if (r.completedGrid) router.replace({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: r.completedGrid } });
     else goBack(router);
@@ -132,6 +135,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
           const r = await deleteMoment(db, momentId);
           removeFiles([...r.removedFiles, ...fresh.current]);
           saved.current = true;
+          emitDataChanged();
           sync.request();
           goBack(router);
         },
