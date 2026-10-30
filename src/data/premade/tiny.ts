@@ -474,7 +474,7 @@ export const workHolidayParty: StarterGrid = {
         'Swap festive greetings at the door',
         'Snap the Christmas lights on the way',
         'Order a festive drink',
-        'Ask someone about their best moment this year',
+        'Spot the best festive jumper in the room',
       ],
     },
     {
@@ -491,7 +491,7 @@ export const workHolidayParty: StarterGrid = {
       name: 'Fun',
       prompts: [
         'Tell the funniest story of your year',
-        'Guess who your Secret Santa is',
+        'Start a round of would you rather',
         'Get in a group photo with your team',
         'Share a dessert with the people beside you',
         'Order something new from the drinks menu',
