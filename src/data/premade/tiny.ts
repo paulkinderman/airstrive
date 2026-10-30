@@ -471,10 +471,10 @@ export const workHolidayParty: StarterGrid = {
       name: 'Arrive',
       prompts: [
         'Wear your best festive jumper',
-        'Brave the Tube in your party clothes',
+        'Arrive early enough to grab a good seat',
         'Snap the Christmas lights on the way',
-        'Get the first round in',
-        'Say hello to everyone on the team',
+        'Order a festive drink to start',
+        'Ask someone about their best moment this year',
       ],
     },
     {
@@ -490,10 +490,10 @@ export const workHolidayParty: StarterGrid = {
     {
       name: 'Fun',
       prompts: [
-        'Pull a cracker and wear the paper crown',
-        'Read the worst cracker joke out loud',
+        'Tell the funniest story of your year',
+        'Win a round of table trivia',
         'Get in a group photo with your team',
-        'Have a mince pie, or a second one',
+        'Share a dessert with the people beside you',
         'Order something new from the drinks menu',
       ],
     },
@@ -502,9 +502,9 @@ export const workHolidayParty: StarterGrid = {
       prompts: [
         'Thank someone who made your year easier',
         'Toast a coworker who had a big year',
-        'Settle the bill without any fuss',
-        'Get everyone onto a night bus or a cab',
-        'Share the best photos in the team chat',
+        'Say goodbye to everyone before you leave',
+        'Make lunch plans with a teammate for January',
+        'Text the team chat once you are home safe',
       ],
     },
   ],

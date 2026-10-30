@@ -6,23 +6,23 @@ on conflict (id) do update set title = excluded.title, color = excluded.color, t
 
 insert into public.grid_squares (grid_id, idx, prompt, cluster) values
   ('grid_work_holiday_party', 0, 'Wear your best festive jumper', 'Arrive'),
-  ('grid_work_holiday_party', 1, 'Brave the Tube in your party clothes', 'Arrive'),
+  ('grid_work_holiday_party', 1, 'Arrive early enough to grab a good seat', 'Arrive'),
   ('grid_work_holiday_party', 2, 'Snap the Christmas lights on the way', 'Arrive'),
-  ('grid_work_holiday_party', 3, 'Get the first round in', 'Arrive'),
-  ('grid_work_holiday_party', 7, 'Say hello to everyone on the team', 'Arrive'),
+  ('grid_work_holiday_party', 3, 'Order a festive drink to start', 'Arrive'),
+  ('grid_work_holiday_party', 7, 'Ask someone about their best moment this year', 'Arrive'),
   ('grid_work_holiday_party', 6, 'Learn what a coworker does outside work', 'Mingle'),
   ('grid_work_holiday_party', 5, 'Sit next to someone you rarely talk to', 'Mingle'),
   ('grid_work_holiday_party', 4, 'Ask a colleague for their best London find', 'Mingle'),
   ('grid_work_holiday_party', 8, 'Find out someone''s favorite holiday tradition', 'Mingle'),
   ('grid_work_holiday_party', 9, 'Learn where everyone is off to for the holidays', 'Mingle'),
-  ('grid_work_holiday_party', 10, 'Pull a cracker and wear the paper crown', 'Fun'),
-  ('grid_work_holiday_party', 11, 'Read the worst cracker joke out loud', 'Fun'),
+  ('grid_work_holiday_party', 10, 'Tell the funniest story of your year', 'Fun'),
+  ('grid_work_holiday_party', 11, 'Win a round of table trivia', 'Fun'),
   ('grid_work_holiday_party', 15, 'Get in a group photo with your team', 'Fun'),
-  ('grid_work_holiday_party', 14, 'Have a mince pie, or a second one', 'Fun'),
+  ('grid_work_holiday_party', 14, 'Share a dessert with the people beside you', 'Fun'),
   ('grid_work_holiday_party', 13, 'Order something new from the drinks menu', 'Fun'),
   ('grid_work_holiday_party', 12, 'Thank someone who made your year easier', 'Wrap up'),
   ('grid_work_holiday_party', 16, 'Toast a coworker who had a big year', 'Wrap up'),
-  ('grid_work_holiday_party', 17, 'Settle the bill without any fuss', 'Wrap up'),
-  ('grid_work_holiday_party', 18, 'Get everyone onto a night bus or a cab', 'Wrap up'),
-  ('grid_work_holiday_party', 19, 'Share the best photos in the team chat', 'Wrap up')
+  ('grid_work_holiday_party', 17, 'Say goodbye to everyone before you leave', 'Wrap up'),
+  ('grid_work_holiday_party', 18, 'Make lunch plans with a teammate for January', 'Wrap up'),
+  ('grid_work_holiday_party', 19, 'Text the team chat once you are home safe', 'Wrap up')
 on conflict (grid_id, idx) do update set prompt = excluded.prompt, cluster = excluded.cluster;
