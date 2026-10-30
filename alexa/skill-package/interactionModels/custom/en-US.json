@@ -1,0 +1,86 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "air strive",
+      "intents": [
+        {
+          "name": "WhatsNewIntent",
+          "slots": [],
+          "samples": [
+            "what's new",
+            "what is new",
+            "what's new from my friends",
+            "what's new from my family",
+            "what did my friends do",
+            "what have my friends been up to",
+            "any news",
+            "tell me what's new"
+          ]
+        },
+        {
+          "name": "ShowPhotosIntent",
+          "slots": [{ "name": "person", "type": "FriendName" }],
+          "samples": [
+            "show the photos",
+            "show photos",
+            "show me the photos",
+            "show me photos",
+            "show pictures",
+            "start the photo show",
+            "play the photos",
+            "show photos from {person}",
+            "show me photos from {person}",
+            "show pictures from {person}",
+            "show {person} photos",
+            "show me {person} photos",
+            "show {person} moments",
+            "show me what {person} shared"
+          ]
+        },
+        {
+          "name": "NextUpIntent",
+          "slots": [],
+          "samples": [
+            "what's next",
+            "what is next",
+            "what's up next",
+            "what's next on my grids",
+            "what should I do next",
+            "next up",
+            "what's my next square"
+          ]
+        },
+        {
+          "name": "ShowGridsIntent",
+          "slots": [],
+          "samples": [
+            "show my grids",
+            "show my grid",
+            "show me my grids",
+            "open my grids",
+            "how are my grids",
+            "how am I doing"
+          ]
+        },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.PauseIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.NextIntent", "samples": [] },
+        { "name": "AMAZON.PreviousIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] }
+      ],
+      "types": [
+        {
+          "name": "FriendName",
+          "values": [
+            { "name": { "value": "friend" } },
+            { "name": { "value": "mom" } },
+            { "name": { "value": "dad" } }
+          ]
+        }
+      ]
+    }
+  }
+}

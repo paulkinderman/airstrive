@@ -1,0 +1,57 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "AirStrive",
+          "summary": "See the moments your friends and family share on AirStrive, and your own grids, on your Echo Show.",
+          "description": "AirStrive is a scrapbook of small experiences, filled in one square at a time. Link your AirStrive account and your Echo Show becomes a window onto it: the newest moments your friends and family share with you, a full-screen photo show, and your own grids with what's up next.\n\nTry:\n- \"Alexa, open AirStrive\" for the latest moments\n- \"Alexa, ask AirStrive to show the photos\" for a photo show\n- \"Alexa, ask AirStrive what's new\" to hear what friends did\n- \"Alexa, ask AirStrive what's next\" for your grids\n\nThe skill only reads. It shows exactly what you can see in the app, follows the same sharing settings, and never posts anything. You need a free AirStrive account; sign in with the same Apple, Google or email you use in the app.",
+          "examplePhrases": [
+            "Alexa, open air strive",
+            "Alexa, ask air strive to show the photos",
+            "Alexa, ask air strive what's new"
+          ],
+          "keywords": ["photos", "family", "scrapbook", "moments", "friends", "memories", "bucket list"],
+          "smallIconUri": "https://airstrive.vercel.app/alexa-icon-108.png",
+          "largeIconUri": "https://airstrive.vercel.app/alexa-icon-512.png"
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": ["US"],
+      "testingInstructions": "Link with the test account in the certification notes (sign in with email, then enter the code sent to that inbox, which we forward). It has friends who have shared moments with photos, and two grids with squares done and one revealed. Try: open air strive; show the photos; show photos from Sam; what's new; what's next; show my grids; then tap a grid and a done square.",
+      "category": "SOCIAL_NETWORKING"
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://vgibkjwfdiuorrbykvlr.supabase.co/functions/v1/alexa",
+          "sslCertificateType": "Wildcard"
+        },
+        "interfaces": [
+          {
+            "type": "ALEXA_PRESENTATION_APL",
+            "supportedViewports": [
+              { "mode": "HUB", "shape": "ROUND", "minWidth": 100, "maxWidth": 599, "minHeight": 100, "maxHeight": 599 },
+              { "mode": "HUB", "shape": "RECTANGLE", "minWidth": 600, "maxWidth": 1279, "minHeight": 100, "maxHeight": 599 },
+              { "mode": "HUB", "shape": "RECTANGLE", "minWidth": 1280, "maxWidth": 1920, "minHeight": 600, "maxHeight": 1279 }
+            ]
+          }
+        ]
+      }
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://airstrive.vercel.app/privacy",
+          "termsOfUseUrl": "https://airstrive.vercel.app/support"
+        }
+      }
+    }
+  },
+  "manifestVersion": "1.0"
+}

@@ -92,6 +92,8 @@ function Routes() {
         </Stack.Protected>
         {/* Friend links open in any state: before sign-in they wait for the shelf (src/friends/pendingCode.ts). */}
         <Stack.Screen name="f/[code]" />
+        {/* So does linking AirStrive to Alexa (src/auth/pendingConsent.ts). */}
+        <Stack.Screen name="oauth/consent" />
       </Stack>
     </SyncProvider>
   );
