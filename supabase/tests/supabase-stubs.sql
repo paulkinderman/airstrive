@@ -5,6 +5,10 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
 end $$;
+-- Supabase installs extensions such as pgcrypto in their own schema, not public, so a
+-- function needs `extensions` on its search_path to call them.
+create schema extensions;
+create extension pgcrypto schema extensions;
 create schema auth;
 create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as
