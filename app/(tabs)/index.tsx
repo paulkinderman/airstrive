@@ -12,6 +12,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useAvatar } from '@/friends/avatars';
 import { useSync } from '@/sync/SyncProvider';
 import { useDataVersion } from '@/sync/events';
+import { useWideLayout } from '@/ui/wide';
+import { WideHome } from '@/wide/WideHome';
 import { colors, radius } from '@/theme';
 
 function greeting() {
@@ -20,6 +22,10 @@ function greeting() {
 }
 
 export default function Home() {
+  return useWideLayout() ? <WideHome /> : <PhoneHome />;
+}
+
+function PhoneHome() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
