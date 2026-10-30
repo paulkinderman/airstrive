@@ -34,7 +34,7 @@ export default function SharedGrid() {
     const uris = (s.moment?.photos ?? []).map((p) => urls?.get(p.storagePath)).filter((u): u is string => !!u);
     return {
       squareStateId: String(s.idx), idx: s.idx, state: s.state, prompt: s.prompt, hint: '', cluster: s.cluster,
-      viaFreebie: false, momentId: s.moment?.id ?? null, coverUri: uris[0] ?? null, photoUris: uris,
+      viaFreebie: false, momentId: s.moment?.id ?? null, fill: s.moment?.fill ?? '', coverUri: uris[0] ?? null, photoUris: uris,
     };
   }), [board, urls]);
 
@@ -73,7 +73,7 @@ export default function SharedGrid() {
         </View>
         <View style={{ paddingHorizontal: 20, paddingTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap, maxWidth: 640 }}>
           {squares.map((s) => (
-            <Tile key={s.idx} square={s} size={cell} color={board.grid.color} selected={s.idx === selected} onPress={() => setSelected(s.idx)} />
+            <Tile key={s.idx} square={s} size={cell} color={board.grid.color} revealIcon={board.grid.revealIcon} selected={s.idx === selected} onPress={() => setSelected(s.idx)} />
           ))}
         </View>
       </ScrollView>

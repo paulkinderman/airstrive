@@ -57,7 +57,7 @@ export function Mosaic({
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: cols * cell + (cols - 1) * gap, flexDirection: 'row', flexWrap: 'wrap', gap }}>
             {squares.map((s) =>
-              s.state === 'done' && s.photoUris.length > 0 ? (
+              s.state === 'done' ? (
                 <Tile key={s.squareStateId} square={s} size={cell} color={color} selected={false} onPress={() => {}} />
               ) : (
                 <View

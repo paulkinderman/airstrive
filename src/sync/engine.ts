@@ -215,10 +215,10 @@ export async function ensureGrids(db: SQLiteDatabase, remote: Remote, gridIds: s
   for (const t of await remote.fetchGrids(missing)) {
     const g = t.grid;
     await db.runAsync(
-      `INSERT OR REPLACE INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, is_official, author_id, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO grids (id, title, color, theme, size, cols, rows, description, reveal_icon, made_by, is_public, is_official, author_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       g.id as string, g.title as string, g.color as string, g.theme as string, g.size as string, g.cols as number, g.rows as number,
-      (g.description as string) ?? '', (g.made_by as string) ?? '', g.is_public ? 1 : 0, g.is_official ? 1 : 0,
+      (g.description as string) ?? '', (g.reveal_icon as string) ?? '', (g.made_by as string) ?? '', g.is_public ? 1 : 0, g.is_official ? 1 : 0,
       (g.author_id as string) ?? null, normalizeTs(g.updated_at) ?? nowIso(),
     );
     for (const s of t.squares) {

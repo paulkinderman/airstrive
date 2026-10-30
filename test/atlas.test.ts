@@ -183,6 +183,23 @@ test('a made grid syncs to the server before its shelf copy, and reaches a secon
   assert.equal(shelf[0].userGridId, ug);
 });
 
+test("a made grid's reveal icon shows on its board and reaches a second phone", async () => {
+  const server = new FakeServer();
+  const a = await phone(server);
+  const squares = layOut('tiny', [], board('tiny', 20).map((prompt) => ({ prompt, cluster: 'Bank' })));
+  const ug = await createGrid(a.x, USER, {
+    title: 'Birds', color: '#2EB08A', theme: 'Outdoors', size: 'tiny', description: '', revealIcon: '🐦', isPublic: false, squares,
+  });
+  assert.equal((await loadBoard(a.x, ug))!.revealIcon, '🐦');
+  await a.sync();
+  const [saved] = server.grids.values();
+  assert.equal(saved.grid.reveal_icon, '🐦');
+
+  const b = await phone(server);
+  await b.sync();
+  assert.equal((await loadBoard(b.x, ug))!.revealIcon, '🐦');
+});
+
 test('sharing pushes, and a suspended account gets its grid back as private', async () => {
   const server = new FakeServer();
   const a = await phone(server);

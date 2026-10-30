@@ -39,7 +39,7 @@ export interface Profile {
 
 export interface SharedPhoto { id: string; storagePath: string; isCover: boolean; width: number; height: number }
 
-export interface SharedMoment { id: string; title: string; body: string; happenedOn: string; photos: SharedPhoto[] }
+export interface SharedMoment { id: string; title: string; body: string; happenedOn: string; fill: string; photos: SharedPhoto[] }
 
 export interface SharedSquare { idx: number; state: SquareState; prompt: string; cluster: string; moment: SharedMoment | null }
 
@@ -49,7 +49,7 @@ export interface SharedBoard {
   owner: string;
   audience: Audience;
   completedAt: string | null;
-  grid: { id: string; title: string; color: string; cols: number; rows: number; description: string; madeBy: string };
+  grid: { id: string; title: string; color: string; cols: number; rows: number; description: string; madeBy: string; revealIcon: string };
   squares: SharedSquare[];
 }
 
@@ -146,7 +146,7 @@ export async function getSharedBoard(userGridId: string): Promise<SharedBoard | 
     completedAt: (b.completed_at as string) ?? null,
     grid: {
       id: String(g.id), title: String(g.title), color: String(g.color), cols: Number(g.cols), rows: Number(g.rows),
-      description: String(g.description ?? ''), madeBy: String(g.made_by ?? ''),
+      description: String(g.description ?? ''), madeBy: String(g.made_by ?? ''), revealIcon: String(g.reveal_icon ?? ''),
     },
     squares: ((b.squares as Row[]) ?? []).map((s) => {
       const m = s.moment as Row | null;
@@ -154,6 +154,7 @@ export async function getSharedBoard(userGridId: string): Promise<SharedBoard | 
         idx: Number(s.idx), state: s.state as SquareState, prompt: String(s.prompt ?? ''), cluster: String(s.cluster ?? ''),
         moment: m ? {
           id: String(m.id), title: String(m.title), body: String(m.body ?? ''), happenedOn: String(m.happened_on),
+          fill: String(m.fill ?? ''),
           photos: ((m.photos as Row[]) ?? []).map((p) => ({
             id: String(p.id), storagePath: String(p.storage_path), isCover: !!p.is_cover, width: Number(p.width), height: Number(p.height),
           })),

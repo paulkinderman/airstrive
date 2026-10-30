@@ -16,6 +16,7 @@ import { Button } from '@/ui/Button';
 import { colors, fonts, radius } from '@/theme';
 import { getGroupMoment, removeMyPart, saveGroupMoment, type EntryAudience, type GroupEntry, type GroupPhoto } from './repo';
 import { DetailChip as Chip } from '@/ui/DetailChip';
+import { SquareLookPicker } from '@/ui/SquareLook';
 
 const MAX_PHOTOS = 6;
 
@@ -40,6 +41,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
   const [place, setPlace] = useState('');
   const [weather, setWeather] = useState('');
   const [withPeople, setWithPeople] = useState('');
+  const [fill, setFill] = useState('');
   const [body, setBody] = useState('');
   const [audience, setAudience] = useState<EntryAudience>('group');
   const [mine, setMine] = useState<MyPhoto[]>([]);
@@ -63,6 +65,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
       setPlace(existing.place);
       setWeather(existing.weather);
       setWithPeople(existing.withPeople);
+      setFill(existing.fill);
       const myEntry = existing.entries.find((e) => e.mine);
       if (myEntry) { setBody(myEntry.body); setAudience(myEntry.audience); }
       const myPhotos = existing.photos.filter((p) => p.mine);
@@ -100,7 +103,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
     if (!meta || saving || !userId) return;
     setSaving(true);
     const r = await saveGroupMoment(db, squareId, userId, {
-      title: meta.prompt, happenedOn, place: place.trim(), weather: weather.trim(), withPeople: withPeople.trim(),
+      title: meta.prompt, happenedOn, place: place.trim(), weather: weather.trim(), withPeople: withPeople.trim(), fill,
       body, audience, photos: mine,
     });
     saved.current = true;
@@ -179,6 +182,12 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
           <Chip icon="people" value={withPeople} onChange={setWithPeople} placeholder="With someone" />
         </View>
         <Text variant="caption" style={{ marginTop: -8 }}>Everyone in this grid sees the date and these details, and can change them.</Text>
+
+        <View style={{ gap: 10 }}>
+          <Text variant="label">Square fill</Text>
+          <SquareLookPicker kind="fill" value={fill} onChange={setFill} color={meta.color} />
+          <Text variant="caption">How this square fills in on the grid when it has no photo. It's shared with the group.</Text>
+        </View>
 
         {(theirs.entries.length > 0 || theirs.photos.length > 0) && (
           <View style={{ gap: 10 }}>

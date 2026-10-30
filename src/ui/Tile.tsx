@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import type { BoardSquare } from '@/db/repo';
 import { colors } from '@/theme';
+import { RevealMark, SquareEmoji, fillLook } from './SquareLook';
 
 const CYCLE_MS = 9000;
 const FADE_MS = 1400;
@@ -11,7 +12,9 @@ const RETRY_MS = 400;
 const MAX_WAIT_MS = 6000;
 
 /**
- * One square on the board. Done squares with several photos drift between them;
+ * One square on the board. A revealed square shows the grid's icon (`revealIcon`, '' for
+ * the dot); a done square with no photo shows its moment's fill.
+ * Done squares with several photos drift between them;
  * each tile starts at a different point in the cycle so the board shimmers rather than flips.
  *
  * Two image layers sit on top of each other and take turns. Only the hidden layer ever
@@ -19,8 +22,10 @@ const MAX_WAIT_MS = 6000;
  * visible image never swaps or blanks mid-view.
  */
 export function Tile({
-  square, size, color, selected, onPress, onHover,
-}: { square: BoardSquare; size: number; color: string; selected: boolean; onPress: () => void; onHover?: (on: boolean) => void }) {
+  square, size, color, revealIcon = '', selected, onPress, onHover,
+}: {
+  square: BoardSquare; size: number; color: string; revealIcon?: string; selected: boolean; onPress: () => void; onHover?: (on: boolean) => void;
+}) {
   const uris = square.photoUris;
   const multi = uris.length > 1;
   const urisKey = uris.join('|');
@@ -106,7 +111,8 @@ export function Tile({
     );
   }
 
-  const bg = square.state === 'done' ? color : square.state === 'revealed' ? colors.card : colors.tileHidden;
+  const fill = fillLook(square.state === 'done' ? square.fill : '', color);
+  const bg = square.state === 'done' ? fill.bg : square.state === 'revealed' ? colors.card : colors.tileHidden;
   return (
     <Pressable
       {...a11y}
@@ -118,9 +124,8 @@ export function Tile({
         ring,
       ]}
     >
-      {square.state === 'revealed' && (
-        <View style={{ width: size * 0.27, height: size * 0.27, borderRadius: size * 0.14, backgroundColor: color }} />
-      )}
+      {square.state === 'revealed' && <RevealMark icon={revealIcon} color={color} size={size} />}
+      {square.state === 'done' && fill.emoji ? <SquareEmoji emoji={fill.emoji} size={size * 0.5} /> : null}
     </Pressable>
   );
 }

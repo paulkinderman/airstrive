@@ -46,6 +46,8 @@ export interface GroupMoment {
   place: string;
   weather: string;
   withPeople: string;
+  /** How the square fills when it has no photo, shared by the group (see BoardSquare.fill). */
+  fill: string;
   entries: GroupEntry[];
   photos: GroupPhoto[];
 }
@@ -89,9 +91,9 @@ export function togetherLine(people: GroupPerson[], me: string | null): string {
 
 export async function getGroupMoment(db: SQLiteDatabase, squareStateId: string, me: string | null): Promise<GroupMoment | null> {
   const m = await db.getFirstAsync<{
-    id: string; title: string; happened_on: string; place: string; weather: string; with_people: string; group_id: string;
+    id: string; title: string; happened_on: string; place: string; weather: string; with_people: string; fill: string; group_id: string;
   }>(
-    `SELECT id, title, happened_on, place, weather, with_people, group_id FROM moments
+    `SELECT id, title, happened_on, place, weather, with_people, fill, group_id FROM moments
      WHERE square_state_id = ? AND deleted_at IS NULL`, squareStateId,
   );
   if (!m) return null;
@@ -112,6 +114,7 @@ export async function getGroupMoment(db: SQLiteDatabase, squareStateId: string, 
     place: m.place,
     weather: m.weather,
     withPeople: m.with_people,
+    fill: m.fill,
     entries: entries.map((e) => ({
       id: e.id, userId: e.user_id, name: nameFor(people, e.user_id, me), mine: !!me && e.user_id === me,
       body: e.body, audience: asEntryAudience(e.audience),
@@ -129,6 +132,8 @@ export interface GroupMomentInput {
   place: string;
   weather: string;
   withPeople: string;
+  /** Left out, a new moment fills with the grid's color and an edit keeps its fill. */
+  fill?: string;
   /** This person's words. Empty removes their entry. */
   body: string;
   audience: EntryAudience;
@@ -150,9 +155,12 @@ export async function saveGroupMoment(
   if (!sq?.group_id) throw new Error('not a group square');
   const groupId = sq.group_id;
   const now = nowIso();
-  const existing = await db.getFirstAsync<{ id: string; title: string; happened_on: string; place: string; weather: string; with_people: string }>(
-    'SELECT id, title, happened_on, place, weather, with_people FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
+  const existing = await db.getFirstAsync<{
+    id: string; title: string; happened_on: string; place: string; weather: string; with_people: string; fill: string;
+  }>(
+    'SELECT id, title, happened_on, place, weather, with_people, fill FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
   );
+  const fill = (input.fill ?? existing?.fill ?? '').trim().slice(0, 16);
   const momentId = existing?.id ?? newId();
   const removedFiles: string[] = [];
   let completed = false;
@@ -160,18 +168,18 @@ export async function saveGroupMoment(
   await db.withTransactionAsync(async () => {
     if (!existing) {
       await db.runAsync(
-        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, audience, group_id, user_id, created_at, updated_at)
-         VALUES (?, ?, ?, '', ?, ?, ?, ?, 'private', ?, ?, ?, ?)`,
-        momentId, squareStateId, input.title, input.happenedOn, input.place, input.weather, input.withPeople, groupId, me, now, now,
+        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, fill, audience, group_id, user_id, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, 'private', ?, ?, ?, ?)`,
+        momentId, squareStateId, input.title, input.happenedOn, input.place, input.weather, input.withPeople, fill, groupId, me, now, now,
       );
       await markDirty(db, 'moments', momentId);
     } else if (
       existing.title !== input.title || existing.happened_on !== input.happenedOn || existing.place !== input.place
-      || existing.weather !== input.weather || existing.with_people !== input.withPeople
+      || existing.weather !== input.weather || existing.with_people !== input.withPeople || existing.fill !== fill
     ) {
       await db.runAsync(
-        'UPDATE moments SET title = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, updated_at = ? WHERE id = ?',
-        input.title, input.happenedOn, input.place, input.weather, input.withPeople, now, momentId,
+        'UPDATE moments SET title = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, fill = ?, updated_at = ? WHERE id = ?',
+        input.title, input.happenedOn, input.place, input.weather, input.withPeople, fill, now, momentId,
       );
       await markDirty(db, 'moments', momentId);
     }

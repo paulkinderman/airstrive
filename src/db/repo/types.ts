@@ -26,6 +26,8 @@ export interface BoardSquare {
   cluster: string;
   viaFreebie: boolean;
   momentId: string | null;
+  /** How the square fills when done with no photo: '' for the grid's color, '#rrggbb', or an emoji. */
+  fill: string;
   coverUri: string | null;
   photoUris: string[];
 }
@@ -42,6 +44,8 @@ export interface Moment {
   place: string;
   weather: string;
   withPeople: string;
+  /** How the square fills on the grid when it has no photo (see BoardSquare.fill). */
+  fill: string;
   /** Set for a moment in a group grid, whose words are each person's own (src/groups). */
   groupId: string | null;
   /** In a group grid, each person's words (that this phone can see), first written first. */

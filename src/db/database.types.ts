@@ -200,6 +200,7 @@ export type Database = {
           is_public: boolean
           made_by: string
           prerequisite_grid_id: string | null
+          reveal_icon: string
           rows: number
           server_updated_at: string
           shared_at: string | null
@@ -221,6 +222,7 @@ export type Database = {
           is_public?: boolean
           made_by?: string
           prerequisite_grid_id?: string | null
+          reveal_icon?: string
           rows: number
           server_updated_at?: string
           shared_at?: string | null
@@ -242,6 +244,7 @@ export type Database = {
           is_public?: boolean
           made_by?: string
           prerequisite_grid_id?: string | null
+          reveal_icon?: string
           rows?: number
           server_updated_at?: string
           shared_at?: string | null
@@ -478,6 +481,7 @@ export type Database = {
           body: string
           created_at: string
           deleted_at: string | null
+          fill: string
           group_id: string | null
           happened_on: string
           id: string
@@ -495,6 +499,7 @@ export type Database = {
           body?: string
           created_at: string
           deleted_at?: string | null
+          fill?: string
           group_id?: string | null
           happened_on: string
           id: string
@@ -512,6 +517,7 @@ export type Database = {
           body?: string
           created_at?: string
           deleted_at?: string | null
+          fill?: string
           group_id?: string | null
           happened_on?: string
           id?: string

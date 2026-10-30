@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { seedGridTemplates } from '@/data/seed';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** v0's schema, kept as-is so phones that ran v0 upgrade through the same path. */
 export const V1 = `
@@ -202,6 +202,16 @@ const V5 = `
   );
 `;
 
+/**
+ * How squares look: the icon on a grid's revealed squares ('' is the dot) and how a
+ * moment fills its done square when it has no photo ('' is the grid's color, '#rrggbb'
+ * another color, anything else an emoji).
+ */
+const V6 = `
+  ALTER TABLE grids ADD COLUMN reveal_icon TEXT NOT NULL DEFAULT '';
+  ALTER TABLE moments ADD COLUMN fill TEXT NOT NULL DEFAULT '';
+`;
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -245,6 +255,14 @@ export async function migrate(db: SQLiteDatabase) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(V5);
       await db.execAsync('PRAGMA user_version = 5');
+    });
+    current = 5;
+  }
+
+  if (current < 6) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(V6);
+      await db.execAsync('PRAGMA user_version = 6');
     });
   }
 

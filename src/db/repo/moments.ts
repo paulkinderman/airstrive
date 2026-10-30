@@ -13,6 +13,8 @@ export interface MomentInput {
   place: string;
   weather: string;
   withPeople: string;
+  /** Left out, a new moment fills with the grid's color and an edit keeps its fill. */
+  fill?: string;
   /** Left out, a new moment takes its grid's audience and an edit keeps the moment's own. */
   audience?: Audience;
   /** Existing photos keep their id; new ones have none. `path` is relative to the documents folder. */
@@ -27,11 +29,12 @@ export async function saveMoment(db: SQLiteDatabase, squareStateId: string, inpu
   );
   if (!sq) throw new Error('square not found');
   const now = nowIso();
-  const existing = await db.getFirstAsync<{ id: string; audience: string }>(
-    'SELECT id, audience FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
+  const existing = await db.getFirstAsync<{ id: string; audience: string; fill: string }>(
+    'SELECT id, audience, fill FROM moments WHERE square_state_id = ? AND deleted_at IS NULL', squareStateId,
   );
   const gridAudience = asAudience(sq.grid_audience);
   const audience = narrower(input.audience ?? (existing ? asAudience(existing.audience) : gridAudience), gridAudience);
+  const fill = (input.fill ?? existing?.fill ?? '').trim().slice(0, 16);
   const momentId = existing?.id ?? newId();
   const removedFiles: string[] = [];
   let completed = false;
@@ -39,14 +42,14 @@ export async function saveMoment(db: SQLiteDatabase, squareStateId: string, inpu
   await db.withTransactionAsync(async () => {
     if (existing) {
       await db.runAsync(
-        `UPDATE moments SET title = ?, body = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, audience = ?, updated_at = ? WHERE id = ?`,
-        input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, now, momentId,
+        `UPDATE moments SET title = ?, body = ?, happened_on = ?, place = ?, weather = ?, with_people = ?, audience = ?, fill = ?, updated_at = ? WHERE id = ?`,
+        input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, fill, now, momentId,
       );
     } else {
       await db.runAsync(
-        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, audience, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        momentId, squareStateId, input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, now, now,
+        `INSERT INTO moments (id, square_state_id, title, body, happened_on, place, weather, with_people, audience, fill, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        momentId, squareStateId, input.title, input.body, input.happenedOn, input.place, input.weather, input.withPeople, audience, fill, now, now,
       );
     }
     await markDirty(db, 'moments', momentId);
@@ -127,7 +130,7 @@ export async function deleteMoment(db: SQLiteDatabase, momentId: string): Promis
 
 // A group moment's words are in its entries; the first one stands in for the body here.
 const MOMENT_SELECT = `
-  SELECT m.id, m.square_state_id, ss.user_grid_id, m.title, m.happened_on, m.place, m.weather, m.with_people, m.group_id,
+  SELECT m.id, m.square_state_id, ss.user_grid_id, m.title, m.happened_on, m.place, m.weather, m.with_people, m.fill, m.group_id,
          CASE WHEN m.group_id IS NULL THEN m.body ELSE COALESCE((
            SELECT e.body FROM moment_entries e WHERE e.moment_id = m.id AND e.deleted_at IS NULL AND e.body != ''
            ORDER BY e.created_at LIMIT 1), '') END AS body,
@@ -141,7 +144,7 @@ const MOMENT_SELECT = `
 
 type MomentRow = {
   id: string; square_state_id: string; user_grid_id: string; title: string; body: string; happened_on: string;
-  place: string; weather: string; with_people: string; audience: string; grid_audience: string; group_id: string | null;
+  place: string; weather: string; with_people: string; fill: string; audience: string; grid_audience: string; group_id: string | null;
   grid_title: string; grid_color: string; prompt: string;
 };
 
@@ -172,6 +175,7 @@ async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]>
       place: r.place,
       weather: r.weather,
       withPeople: r.with_people,
+      fill: r.fill,
       groupId: r.group_id,
       entries: entries.map((e) => ({
         name: e.user_id && e.user_id === me ? 'You' : e.username ?? 'A former member', body: e.body, mine: !!me && e.user_id === me,
