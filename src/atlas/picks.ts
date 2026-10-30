@@ -1,5 +1,5 @@
 import { THEMES, gridMatch, rankThemes, type Theme } from './themes';
-import { startingSquares, type GridSize } from '@/data/types';
+import { startsFor, type GridSize } from '@/data/types';
 
 /** A grid as the Atlas shows it: enough for a card and a preview, without its squares. */
 export interface AtlasGrid {
@@ -17,10 +17,12 @@ export interface AtlasGrid {
   sharedAt: string | null;
   /** The prompts revealed when the grid starts, in board order. */
   starters: string[];
+  /** The squares revealed when the grid starts. Missing from an Atlas cached before creators could pick them. */
+  starts?: number[];
 }
 
-export function startersFrom(size: GridSize, squares: { idx: number; prompt: string }[]): string[] {
-  const start = startingSquares(size);
+export function startersFrom(size: GridSize, squares: { idx: number; prompt: string }[], starts?: unknown): string[] {
+  const start = startsFor(size, starts);
   return squares.filter((s) => start.includes(s.idx)).sort((a, b) => a.idx - b.idx).map((s) => s.prompt);
 }
 

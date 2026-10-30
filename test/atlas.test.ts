@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { TestDb, asExpo, BEFORE_GROUPS } from './sqlite';
 import { FakeServer, FakeDevice } from './fakeServer';
 import { migrate } from '@/db/schema';
-import { adoptGrid } from '@/data/seed';
-import { SIZES, neighbours, placeClusters, spiralOrder, startingSquares, type GridSize } from '@/data/types';
+import { adoptGrid, startGrid } from '@/data/seed';
+import { SIZES, maxStarts, neighbours, parseStarts, placeClusters, spiralOrder, startingSquares, startsFor, type GridSize } from '@/data/types';
 import { STARTERS } from '@/data/starters';
 import { createGrid, listShelf, loadBoard, removeFromShelf, setGridShared, saveMoment } from '@/db/repo';
 import { setMeta } from '@/db/queue';
-import { syncOnce, backfill, wipeLocal, pull } from '@/sync/engine';
+import { syncOnce, backfill, wipeLocal, pull, ensureGrids } from '@/sync/engine';
 import { INTERESTS, rankThemes } from '@/atlas/themes';
 import { byTheme, featured, picksFor, searchAtlas, startersFrom, type AtlasGrid } from '@/atlas/picks';
 import { layOut, similar, suggestRest } from '@/suggest/suggest';
@@ -67,6 +67,19 @@ test('atlas rows, search and the season strip', () => {
 test('starters are the squares revealed at the start, in board order', () => {
   const squares = Array.from({ length: 20 }, (_, idx) => ({ idx, prompt: `p${idx}` }));
   assert.deepEqual(startersFrom('tiny', squares), ['p9', 'p10', 'p12', 'p13', 'p14']);
+  assert.deepEqual(startersFrom('tiny', squares, '19,0'), ['p0', 'p19'], "the creator's own starting squares");
+});
+
+test("a grid's own starting squares must fit its board, or it starts on the usual ones", () => {
+  assert.deepEqual(parseStarts('tiny', '19,0'), [0, 19]);
+  assert.deepEqual(parseStarts('tiny', [3]), [3]);
+  assert.equal(maxStarts('tiny'), 5);
+  assert.equal(maxStarts('full'), 30);
+  for (const bad of ['', '0,1,2,3,4,5', '20', '-1', '4,4', '1.5', 'a', [], null, undefined]) {
+    assert.equal(parseStarts('tiny', bad), null, `${JSON.stringify(bad)} is not a set of starting squares`);
+  }
+  assert.deepEqual(startsFor('small', ''), startingSquares('small'));
+  assert.deepEqual(startsFor('small', '0,47'), [0, 47]);
 });
 
 // ---------- laying out a made grid ----------
@@ -205,6 +218,30 @@ test("a made grid's reveal icon shows on its board and reaches a second phone", 
   const b = await phone(server);
   await b.sync();
   assert.equal((await loadBoard(b.x, ug))!.revealIcon, '🐦');
+});
+
+test('a made grid opens on the squares its creator picked, here and on a phone that adds it', async () => {
+  const server = new FakeServer();
+  const a = await phone(server);
+  const squares = layOut('tiny', [], board('tiny', 20).map((prompt) => ({ prompt, cluster: 'Bank' })));
+  const ug = await createGrid(a.x, USER, {
+    title: 'Corners', color: '#2EB08A', theme: 'Outdoors', size: 'tiny', description: '', isPublic: true, starts: [19, 0, 3], squares,
+  });
+  const open = async (x: typeof a.x, id: string) =>
+    (await loadBoard(x, id))!.squares.filter((s) => s.state === 'revealed').map((s) => s.idx).sort((p, q) => p - q);
+  assert.deepEqual(await open(a.x, ug), [0, 3, 19]);
+  await a.sync();
+  const [saved] = server.grids.values();
+  assert.equal(saved.grid.starts, '0,3,19', 'sent to save_grid');
+
+  // Someone else adds it from the Atlas: the template comes down with its starting squares.
+  const b = await phone(server);
+  await ensureGrids(b.x, b.remote, [saved.grid.id as string]);
+  assert.deepEqual(await open(b.x, await startGrid(b.x, saved.grid.id as string)), [0, 3, 19]);
+
+  // Without a pick, a grid starts on the usual squares.
+  const plain = await createGrid(a.x, USER, { title: 'Plain', color: '#2EB08A', theme: 'Outdoors', size: 'tiny', description: '', isPublic: false, squares });
+  assert.deepEqual(await open(a.x, plain), [...startingSquares('tiny')].sort((p, q) => p - q));
 });
 
 test('sharing pushes, and a suspended account gets its grid back as private', async () => {

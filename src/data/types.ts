@@ -15,6 +15,8 @@ export interface StarterGrid {
   size: GridSize;
   description: string;
   clusters: { name: string; prompts: string[] }[];
+  /** Squares revealed at the start, when not the usual ones (startingSquares). */
+  starts?: number[];
 }
 
 /** How many squares are open when a grid is first started. A tiny grid opens its whole first cluster. */
@@ -23,6 +25,28 @@ const OPENING: Record<GridSize, number> = { tiny: 5, small: 4, medium: 4, full: 
 /** Indexes revealed when a grid is first started: the first squares of the spiral. */
 export function startingSquares(size: GridSize): number[] {
   return spiralOrder(size).slice(0, OPENING[size]);
+}
+
+/** The most starting squares a creator can pick: a quarter of the board. */
+export function maxStarts(size: GridSize): number {
+  return Math.floor((SIZES[size].cols * SIZES[size].rows) / 4);
+}
+
+/**
+ * A grid's own starting squares, read from the phone ('9,10,12'), the server (an array) or a
+ * starter grid. Null when it has none or they don't fit the board, so the grid starts as usual.
+ */
+export function parseStarts(size: GridSize, v: unknown): number[] | null {
+  const raw = Array.isArray(v) ? v : typeof v === 'string' && v.trim() ? v.split(',') : [];
+  const total = SIZES[size].cols * SIZES[size].rows;
+  const out = [...new Set(raw.map((x) => Number(x)))].filter((i) => Number.isInteger(i) && i >= 0 && i < total);
+  if (out.length === 0 || out.length !== raw.length || out.length > maxStarts(size)) return null;
+  return out.sort((a, b) => a - b);
+}
+
+/** Indexes revealed when this grid is started: the creator's pick, or the usual ones. */
+export function startsFor(size: GridSize, starts?: unknown): number[] {
+  return parseStarts(size, starts) ?? startingSquares(size);
 }
 
 /** Four orthogonal neighbours of an index, or fewer at edges. */

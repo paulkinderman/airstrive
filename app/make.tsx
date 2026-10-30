@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Pressable, TextInput, Switch, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { ScrollView, View, Pressable, TextInput, Switch, StyleSheet, KeyboardAvoidingView, Platform, Alert, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { SIZES, spiralOrder, type GridSize } from '@/data/types';
+import { SIZES, maxStarts, parseStarts, spiralOrder, startingSquares, type GridSize } from '@/data/types';
 import { THEMES, type Theme } from '@/atlas/themes';
 import { ensureTemplate } from '@/atlas/catalog';
 import { suggestRest, layOut, OWN_CLUSTER, type Suggested } from '@/suggest/suggest';
@@ -32,6 +32,7 @@ export default function Make() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { userId } = useAuth();
   const sync = useSync();
 
@@ -46,6 +47,8 @@ export default function Make() {
   const [suggested, setSuggested] = useState<Suggested[]>([]);
   const [rejected, setRejected] = useState<string[]>([]);
   const [seed, setSeed] = useState(() => Date.now() % 100000);
+  // The squares revealed when someone starts the grid; null is the usual ones.
+  const [starts, setStarts] = useState<number[] | null>(null);
   const [shared, setShared] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -60,6 +63,7 @@ export default function Make() {
       setColor(t.grid.color);
       setRevealIcon(t.grid.reveal_icon ?? '');
       setSize(t.grid.size);
+      setStarts(parseStarts(t.grid.size, t.grid.starts));
       if ((THEMES as readonly string[]).includes(t.grid.theme)) setTheme(t.grid.theme as Theme);
       setDescription(t.grid.description);
       const byIdx = new Map(t.squares.map((s) => [s.idx, s.prompt]));
@@ -74,6 +78,7 @@ export default function Make() {
 
   const pickSize = (s: GridSize) => {
     setSize(s);
+    setStarts(null);
     setSuggested([]);
     const n = SIZES[s].cols * SIZES[s].rows;
     if (own.length > n) setOwn(own.slice(0, n));
@@ -113,6 +118,26 @@ export default function Make() {
     setSuggested(suggested.filter((_, j) => j !== i));
   };
 
+  const startSet = useMemo(() => new Set(starts ?? startingSquares(size)), [starts, size]);
+  const most = maxStarts(size);
+
+  const toggleStart = (i: number) => {
+    const next = new Set(startSet);
+    if (next.has(i)) {
+      if (next.size === 1) return;
+      next.delete(i);
+    } else {
+      if (next.size >= most) {
+        Alert.alert(`Up to ${most} starting squares`, 'Tap a square with a dot to take it off first.');
+        return;
+      }
+      next.add(i);
+    }
+    const sorted = [...next].sort((a, b) => a - b);
+    const usual = [...startingSquares(size)].sort((a, b) => a - b);
+    setStarts(sorted.join(',') === usual.join(',') ? null : sorted);
+  };
+
   const board = useMemo(() => {
     const order = spiralOrder(size);
     const cells = Array<'own' | 'suggested' | 'empty'>(total).fill('empty');
@@ -128,7 +153,7 @@ export default function Make() {
     try {
       const ug = await createGrid(db, userId, {
         title: title.trim().slice(0, 60), color, revealIcon, theme, size, description: description.trim().slice(0, 280), isPublic: shared,
-        squares: layOut(size, ownClean, suggested),
+        squares: layOut(size, ownClean, suggested), starts: starts ?? undefined,
       });
       sync.request();
       router.dismissAll();
@@ -138,7 +163,7 @@ export default function Make() {
     }
   };
 
-  const cell = size === 'full' ? 14 : size === 'medium' ? 16 : 20;
+  const cell = Math.min(30, Math.floor((width - 40 - 4 * (SIZES[size].cols - 1)) / SIZES[size].cols));
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.paper }}>
@@ -234,18 +259,34 @@ export default function Make() {
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: SIZES[size].cols * (cell + 4) - 4 }}>
             {board.map((c, i) => (
-              <View
+              <Pressable
                 key={i}
+                onPress={() => toggleStart(i)}
+                accessibilityLabel={`Square ${i + 1}`}
+                accessibilityState={{ selected: startSet.has(i) }}
                 style={{
-                  width: cell, height: cell, borderRadius: cell * 0.27,
+                  width: cell, height: cell, borderRadius: cell * 0.27, alignItems: 'center', justifyContent: 'center',
                   backgroundColor: c === 'own' ? color : c === 'suggested' ? colors.card : colors.tileHidden,
                   borderWidth: c === 'suggested' ? 1.5 : 0, borderColor: color, borderStyle: 'dashed',
                 }}
-              />
+              >
+                {startSet.has(i) && (
+                  <View style={{ width: cell * 0.34, height: cell * 0.34, borderRadius: cell, backgroundColor: c === 'own' ? '#fff' : colors.ink }} />
+                )}
+              </Pressable>
             ))}
           </View>
           <Text variant="caption">
             Your own squares go in the middle, so they're the first ones you'll see. Suggestions fill the gaps and keep similar squares next to each other.
+          </Text>
+          <Text variant="caption">
+            Squares with a dot are open when someone starts the grid. Tap squares to choose your own, up to {most}.
+            {starts && (
+              <>
+                {' '}
+                <Text variant="caption" onPress={() => setStarts(null)} style={{ color: colors.ink, textDecorationLine: 'underline' }}>Use the usual ones</Text>
+              </>
+            )}
           </Text>
 
           {own.map((s, i) => (
