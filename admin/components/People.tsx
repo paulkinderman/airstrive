@@ -8,6 +8,7 @@ export function People() {
   const [q, setQ] = useState('');
   const [people, setPeople] = useState<PersonRow[] | null>(null);
   const [grids, setGrids] = useState<GridRow[]>([]);
+  const [pictures, setPictures] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -16,13 +17,16 @@ export function People() {
     setError(null);
     const { data, error } = await db()
       .from('users')
-      .select('id, username, created_at, sharing_suspended, is_admin')
+      .select('id, username, created_at, sharing_suspended, is_admin, avatar_path')
       .ilike('username', likePattern(term))
       .order('username', { ascending: true })
       .limit(20);
     if (error) return setError(errorText(error));
     const found = (data ?? []) as PersonRow[];
     setPeople(found);
+    const paths = found.map((p) => p.avatar_path).filter((p): p is string => !!p);
+    const signed = paths.length ? await db().storage.from('avatars').createSignedUrls(paths, 600) : null;
+    setPictures(new Map((signed?.data ?? []).filter((d) => d.path && d.signedUrl).map((d) => [d.path as string, d.signedUrl as string])));
     if (found.length === 0) return setGrids([]);
     const res = await db()
       .from('grids')
@@ -50,6 +54,16 @@ export function People() {
     await search(q);
   }
 
+  async function clearPicture(p: PersonRow) {
+    setBusy(p.id);
+    setError(null);
+    const { data: old, error } = await db().rpc('admin_clear_avatar', { target: p.id });
+    if (!error && old) await db().storage.from('avatars').remove([String(old)]);
+    setBusy(null);
+    if (error) setError(errorText(error));
+    await search(q);
+  }
+
   const since = Date.now() - 30 * DAY;
 
   return (
@@ -67,25 +81,37 @@ export function People() {
           return (
             <li key={p.id} className="card">
               <div className="row-between">
-                <div>
-                  <h3>
-                    {p.username ?? '(no username)'} {p.is_admin && <span className="pill">admin</span>}{' '}
-                    {p.sharing_suspended && <span className="pill warn">sharing suspended</span>}
-                  </h3>
-                  <p className="muted small">
-                    Joined {formatDate(p.created_at)} · {theirs.length} grid{theirs.length === 1 ? '' : 's'} ·{' '}
-                    {hides} hide{hides === 1 ? '' : 's'} in the last 30 days
-                  </p>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  {p.avatar_path && pictures.get(p.avatar_path) && (
+                    <img src={pictures.get(p.avatar_path)} alt="" width={56} height={56} style={{ objectFit: 'cover', borderRadius: 18 }} />
+                  )}
+                  <div>
+                    <h3>
+                      {p.username ?? '(no username)'} {p.is_admin && <span className="pill">admin</span>}{' '}
+                      {p.sharing_suspended && <span className="pill warn">sharing suspended</span>}
+                    </h3>
+                    <p className="muted small">
+                      Joined {formatDate(p.created_at)} · {theirs.length} grid{theirs.length === 1 ? '' : 's'} ·{' '}
+                      {hides} hide{hides === 1 ? '' : 's'} in the last 30 days
+                    </p>
+                  </div>
                 </div>
-                {p.sharing_suspended ? (
-                  <button className="btn" disabled={busy === p.id} onClick={() => setSuspended(p, false)}>
-                    Restore sharing
-                  </button>
-                ) : (
-                  <button className="btn danger" disabled={busy === p.id} onClick={() => setSuspended(p, true)}>
-                    Suspend sharing
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {p.avatar_path && (
+                    <button className="btn danger" disabled={busy === p.id} onClick={() => clearPicture(p)}>
+                      Remove picture
+                    </button>
+                  )}
+                  {p.sharing_suspended ? (
+                    <button className="btn" disabled={busy === p.id} onClick={() => setSuspended(p, false)}>
+                      Restore sharing
+                    </button>
+                  ) : (
+                    <button className="btn danger" disabled={busy === p.id} onClick={() => setSuspended(p, true)}>
+                      Suspend sharing
+                    </button>
+                  )}
+                </div>
               </div>
               {theirs.length > 0 && (
                 <ul className="sublist">

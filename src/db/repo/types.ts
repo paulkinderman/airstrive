@@ -49,7 +49,7 @@ export interface Moment {
   /** Set for a moment in a group grid, whose words are each person's own (src/groups). */
   groupId: string | null;
   /** In a group grid, each person's words (that this phone can see), first written first. */
-  entries: { name: string; body: string; mine: boolean }[];
+  entries: { userId: string | null; name: string; body: string; mine: boolean }[];
   audience: Audience;
   /** The grid's audience; the moment's can't be wider. */
   gridAudience: Audience;

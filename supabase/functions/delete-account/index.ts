@@ -1,8 +1,9 @@
-// Deletes the signed-in person's account in one request: their photo files, every row
-// they own (via ON DELETE CASCADE from public.users), and the auth user. Grids they
-// shared are kept for the people who adopted them and credited to "a former member".
-// What they added to group grids stays with the group (release_group_rows in the
-// group grids migration), so those photo files move to groups/{group_id}/ first.
+// Deletes the signed-in person's account in one request: their photo files and profile
+// picture, every row they own (via ON DELETE CASCADE from public.users), and the auth
+// user. Grids they shared are kept for the people who adopted them and credited to
+// "a former member". What they added to group grids stays with the group
+// (release_group_rows in the group grids migration), so those photo files move to
+// groups/{group_id}/ first.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -57,6 +58,14 @@ Deno.serve(async (req) => {
     const { error: rmError } = await admin.storage.from('photos').remove(files.map((f) => `${user.id}/${f.name}`));
     if (rmError) return new Response(`storage: ${rmError.message}`, { status: 500, headers: cors });
     if (files.length < 1000) break;
+  }
+
+  // Profile pictures: everything under avatars/{user_id}/.
+  const { data: avatars, error: avatarError } = await admin.storage.from('avatars').list(user.id, { limit: 1000 });
+  if (avatarError) return new Response(`storage: ${avatarError.message}`, { status: 500, headers: cors });
+  if (avatars?.length) {
+    const { error: rmError } = await admin.storage.from('avatars').remove(avatars.map((f) => `${user.id}/${f.name}`));
+    if (rmError) return new Response(`storage: ${rmError.message}`, { status: 500, headers: cors });
   }
 
   const { error: gridError } = await admin.from('grids')

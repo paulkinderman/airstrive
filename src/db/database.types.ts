@@ -816,6 +816,7 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_path: string | null
           bio: string
           created_at: string
           id: string
@@ -828,6 +829,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          avatar_path?: string | null
           bio?: string
           created_at?: string
           id: string
@@ -840,6 +842,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          avatar_path?: string | null
           bio?: string
           created_at?: string
           id?: string
@@ -859,6 +862,7 @@ export type Database = {
     }
     Functions: {
       accept_friend_code: { Args: { code: string }; Returns: string }
+      admin_clear_avatar: { Args: { target: string }; Returns: string }
       admin_moment: { Args: { moment: string }; Returns: Json }
       admin_resolve_report: {
         Args: { action: string; report: string }
@@ -877,6 +881,13 @@ export type Database = {
         Returns: undefined
       }
       are_friends: { Args: { a: string; b: string }; Returns: boolean }
+      avatars: {
+        Args: { ids: string[] }
+        Returns: {
+          avatar_path: string
+          id: string
+        }[]
+      }
       atlas_grids: {
         Args: never
         Returns: {
@@ -898,7 +909,9 @@ export type Database = {
       }
       block_user: { Args: { other: string }; Returns: undefined }
       can_manage_group_folder: { Args: { path: string }; Returns: boolean }
+      can_read_avatar: { Args: { path: string }; Returns: boolean }
       can_read_photo: { Args: { path: string }; Returns: boolean }
+      can_see_avatar: { Args: { owner: string }; Returns: boolean }
       can_view: {
         Args: { audience: string; owner: string; viewer: string }
         Returns: boolean
@@ -992,6 +1005,7 @@ export type Database = {
         Returns: undefined
       }
       save_grid: { Args: { g: Json; squares: Json }; Returns: string }
+      set_avatar: { Args: { path: string }; Returns: string }
       search_usernames: {
         Args: { prefix: string }
         Returns: {

@@ -12,7 +12,7 @@ This is **v2**: everything in v1 (Sign in with Apple, sync between phones throug
 
 And friends:
 
-- **Profile tab.** Your username, a line about you, the grids you share, your friends and friend requests, and Settings.
+- **Profile tab.** Your username, a profile picture (seen only by friends and the people you do grids with), a line about you, the grids you share, your friends and friend requests, and Settings.
 - **Friends** are mutual. Add someone by searching their username (three letters or more) and sending a request, or in person with your QR code or a link (each works once; links last 7 days). Remove and block are silent.
 - **Audiences.** Every grid is Private, Friends or Public (anyone on AirStrive who opens your profile), and each moment in it can match the grid or be narrower. Everything starts Private. Place, weather and who you were with are never shown to anyone else.
 - **Someone's profile** shows the grids that reach you, read-only, with the moments you're allowed to see. There's no feed, and nothing is counted or ranked.

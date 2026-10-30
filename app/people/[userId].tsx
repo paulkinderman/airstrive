@@ -9,7 +9,7 @@ import {
 } from '@/friends/api';
 import { AUDIENCE_LABEL } from '@/friends/audience';
 import { useLoad } from '@/friends/useLoad';
-import { BackIcon, Chevron, Initial } from '@/friends/bits';
+import { Avatar, BackIcon, Chevron } from '@/friends/bits';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { MiniGrid } from '@/ui/MiniGrid';
@@ -90,7 +90,7 @@ export default function PersonProfile() {
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: insets.bottom + 32 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <Initial name={p.username} size={56} />
+            <Avatar userId={p.id} name={p.username} size={56} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="title" style={{ fontSize: 24 }}>{p.username}</Text>
               {p.relation === 'friends' && <Text variant="caption" style={{ color: colors.muted }}>Friends</Text>}
