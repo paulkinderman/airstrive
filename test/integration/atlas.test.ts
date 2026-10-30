@@ -46,7 +46,7 @@ test('a grid made on one phone is shared, found in the Atlas and adopted by some
   assert.ok(listed, 'shared grid is in the Atlas');
   assert.deepEqual(listed!.starters, startingSquares('small').sort((a, b) => a - b).map((i) => `Creek walks prompt ${i}`));
   const officials = (await atlasIds(sam.client)).filter((g) => g.id.startsWith('grid_'));
-  assert.equal(officials.length, 31, 'the official grids are listed too');
+  assert.equal(officials.length, 32, 'the official grids are listed too');
 
   const b = await newPhone(sam);
   await ensureGrids(b.x, supabaseRemote(sam.client), [gridId]);

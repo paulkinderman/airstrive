@@ -17,18 +17,12 @@ export interface StarterGrid {
   clusters: { name: string; prompts: string[] }[];
 }
 
-/** Indexes revealed when a grid is first started. */
+/** How many squares are open when a grid is first started. A tiny grid opens its whole first cluster. */
+const OPENING: Record<GridSize, number> = { tiny: 5, small: 4, medium: 4, full: 4 };
+
+/** Indexes revealed when a grid is first started: the first squares of the spiral. */
 export function startingSquares(size: GridSize): number[] {
-  const { cols, rows } = SIZES[size];
-  const r = Math.floor(rows / 2);
-  const c = Math.floor(cols / 2);
-  if (size === 'tiny') return [r * cols + c - 1, r * cols + c];
-  return [
-    (r - 1) * cols + (c - 1),
-    (r - 1) * cols + c,
-    r * cols + (c - 1),
-    r * cols + c,
-  ];
+  return spiralOrder(size).slice(0, OPENING[size]);
 }
 
 /** Four orthogonal neighbours of an index, or fewer at edges. */
@@ -44,23 +38,29 @@ export function neighbours(idx: number, cols: number, rows: number): number[] {
 }
 
 /**
- * Place clustered prompts on the board so that each cluster occupies a
- * contiguous region. Clusters are laid out as bands, filling the board in
- * reading order; a band's tail wraps onto the next row, which keeps every
- * square adjacent to at least one of its cluster-mates.
+ * Place clustered prompts on the board so that each cluster occupies a contiguous region.
+ * Official grids go along the spiral like made grids, so the first cluster is where the
+ * grid starts. The starter templates pass bandOrder, the layout their boards began with.
  */
-export function placeClusters(grid: StarterGrid): { idx: number; prompt: string; cluster: string }[] {
+export function placeClusters(grid: StarterGrid, order = spiralOrder(grid.size)): { idx: number; prompt: string; cluster: string }[] {
   const { cols, rows } = SIZES[grid.size];
   const total = cols * rows;
   const flat = grid.clusters.flatMap((c) => c.prompts.map((p) => ({ prompt: p, cluster: c.name })));
   if (flat.length !== total) {
     throw new Error(`${grid.title}: ${flat.length} prompts for a ${total}-square board`);
   }
-  // Snake order so cluster bands stay spatially compact across row breaks.
-  return flat.map((item, i) => {
+  return flat.map((item, i) => ({ idx: order[i], ...item }));
+}
+
+/**
+ * Every index in snake order: clusters as bands filling the board in reading order, a
+ * band's tail wrapping onto the next row so each square touches a cluster-mate.
+ */
+export function bandOrder(size: GridSize): number[] {
+  const { cols, rows } = SIZES[size];
+  return Array.from({ length: cols * rows }, (_, i) => {
     const r = Math.floor(i / cols);
-    const c = r % 2 === 0 ? i % cols : cols - 1 - (i % cols);
-    return { idx: r * cols + c, ...item };
+    return r * cols + (r % 2 === 0 ? i % cols : cols - 1 - (i % cols));
   });
 }
 
@@ -72,9 +72,9 @@ export function placeClusters(grid: StarterGrid): { idx: number; prompt: string;
  */
 export function spiralOrder(size: GridSize): number[] {
   const { cols, rows } = SIZES[size];
-  const first = startingSquares(size)[0];
-  let r = Math.floor(first / cols);
-  let c = first % cols;
+  // Just up and left of the centre; a tiny board is one row short of square, so one row lower.
+  let r = Math.floor(rows / 2) - (size === 'tiny' ? 0 : 1);
+  let c = Math.floor(cols / 2) - 1;
   const out: number[] = [];
   const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   let d = 0;

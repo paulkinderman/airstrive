@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { uuidv5 } from '../src/lib/uuid5';
 import { checkUsername } from '../src/lib/username';
 import { STARTERS } from '../src/data/starters';
-import { SIZES, placeClusters, startingSquares, neighbours } from '../src/data/types';
+import { SIZES, bandOrder, placeClusters, startingSquares, neighbours } from '../src/data/types';
 
 function referenceV5(name: string, ns: string) {
   const h = createHash('sha1').update(Buffer.from(ns.replace(/-/g, ''), 'hex')).update(name, 'utf8').digest();
@@ -42,7 +42,7 @@ test('starter grids fill their boards exactly', () => {
   let total = 0;
   for (const g of STARTERS) {
     const { cols, rows } = SIZES[g.size];
-    const placed = placeClusters(g);
+    const placed = placeClusters(g, bandOrder(g.size));
     assert.equal(placed.length, cols * rows, g.title);
     assert.equal(new Set(placed.map((p) => p.idx)).size, cols * rows, `${g.title} indexes unique`);
     total += placed.length;

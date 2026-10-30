@@ -10,10 +10,11 @@
 import { STARTERS } from '../src/data/starters';
 import { PREMADE } from '../src/data/premade';
 import { kinderMemories } from '../src/data/premade/family';
-import { SIZES, placeClusters } from '../src/data/types';
+import { SIZES, bandOrder, placeClusters } from '../src/data/types';
 
 const only = process.argv.slice(3);
-const grids = process.argv[2] === 'premade'
+const premade = process.argv[2] === 'premade';
+const grids = premade
   ? [...PREMADE, kinderMemories].filter((g) => only.length === 0 || only.includes(g.id))
   : STARTERS;
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -30,7 +31,8 @@ for (const g of grids) {
     `on conflict (id) do update set title = excluded.title, color = excluded.color, theme = excluded.theme, description = excluded.description, updated_at = now();`,
     '',
     `insert into public.grid_squares (grid_id, idx, prompt, cluster) values`,
-    placeClusters(g).map((s) => `  (${q(g.id)}, ${s.idx}, ${q(s.prompt)}, ${q(s.cluster)})`).join(',\n'),
+    // The starter templates keep the band layout their boards began with.
+    placeClusters(g, premade ? undefined : bandOrder(g.size)).map((s) => `  (${q(g.id)}, ${s.idx}, ${q(s.prompt)}, ${q(s.cluster)})`).join(',\n'),
     `on conflict (grid_id, idx) do update set prompt = excluded.prompt, cluster = excluded.cluster;`,
     '',
   );
