@@ -45,7 +45,7 @@ export const kinderMemories: StarterGrid = {
     {
       name: 'Keep the memories',
       prompts: [
-        'Take a photo with every generation',
+        'Write down the funniest quote of the trip',
         'Record a grandparent telling a story',
         'Do your best impression of another Kinderman',
         'Hand out awards for the funniest moments',
