@@ -5,7 +5,7 @@ import { useRemote } from '@/lib/useRemote';
 import { listTemplates, getTemplate } from '@/db/repo';
 import { ensureGrids, normalizeTs } from '@/sync/engine';
 import { supabaseRemote } from '@/sync/supabaseRemote';
-import type { GridSize } from '@/data/types';
+import { startsFor, type GridSize } from '@/data/types';
 import { startersFrom, type AtlasGrid } from './picks';
 
 const CACHE = 'atlas_cache';
@@ -18,7 +18,7 @@ async function localAtlas(db: SQLiteDatabase): Promise<AtlasGrid[]> {
     out.push({
       id: g.id, title: g.title, color: g.color, theme: g.theme, size: g.size, cols: g.cols, rows: g.rows,
       description: g.description, madeBy: g.made_by, authorId: g.author_id, isOfficial: g.is_official === 1,
-      sharedAt: null, starters: startersFrom(g.size, t?.squares ?? []),
+      sharedAt: null, starters: startersFrom(g.size, t?.squares ?? [], g.starts), starts: startsFor(g.size, g.starts),
     });
   }
   return out;
@@ -29,7 +29,7 @@ function fromRpc(r: Record<string, unknown>): AtlasGrid {
     id: String(r.id), title: String(r.title), color: String(r.color), theme: String(r.theme), size: r.size as GridSize,
     cols: Number(r.cols), rows: Number(r.rows), description: String(r.description ?? ''), madeBy: String(r.made_by ?? ''),
     authorId: (r.author_id as string) ?? null, isOfficial: !!r.is_official, sharedAt: normalizeTs(r.shared_at),
-    starters: (r.starters as string[]) ?? [],
+    starters: (r.starters as string[]) ?? [], starts: startsFor(r.size as GridSize, r.starts),
   };
 }
 
@@ -66,7 +66,7 @@ export async function findGrid(db: SQLiteDatabase, gridId: string): Promise<Atla
   return {
     id: g.id, title: g.title, color: g.color, theme: g.theme, size: g.size, cols: g.cols, rows: g.rows,
     description: g.description, madeBy: g.made_by, authorId: g.author_id, isOfficial: g.is_official === 1,
-    sharedAt: null, starters: startersFrom(g.size, t.squares),
+    sharedAt: null, starters: startersFrom(g.size, t.squares, g.starts), starts: startsFor(g.size, g.starts),
   };
 }
 

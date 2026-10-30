@@ -10,7 +10,7 @@
 import { STARTERS } from '../src/data/starters';
 import { PREMADE } from '../src/data/premade';
 import { kinderMemories } from '../src/data/premade/family';
-import { SIZES, bandOrder, placeClusters } from '../src/data/types';
+import { SIZES, bandOrder, parseStarts, placeClusters } from '../src/data/types';
 
 const only = process.argv.slice(3);
 const premade = process.argv[2] === 'premade';
@@ -25,10 +25,14 @@ const out: string[] = [
 ];
 for (const g of grids) {
   const { cols, rows } = SIZES[g.size];
+  // Only grids that pick their own starting squares name the column, so grids without
+  // them still write SQL that runs before grids had it.
+  const starts = parseStarts(g.size, g.starts);
+  if (g.starts && !starts) throw new Error(`${g.title}: starting squares don't fit the board`);
   out.push(
-    `insert into public.grids (id, title, color, theme, size, cols, rows, description, made_by, is_official, is_public)`,
-    `values (${q(g.id)}, ${q(g.title)}, ${q(g.color)}, ${q(g.theme)}, ${q(g.size)}, ${cols}, ${rows}, ${q(g.description)}, 'AirStrive', true, true)`,
-    `on conflict (id) do update set title = excluded.title, color = excluded.color, theme = excluded.theme, description = excluded.description, updated_at = now();`,
+    `insert into public.grids (id, title, color, theme, size, cols, rows, description, made_by, is_official, is_public${starts ? ', starts' : ''})`,
+    `values (${q(g.id)}, ${q(g.title)}, ${q(g.color)}, ${q(g.theme)}, ${q(g.size)}, ${cols}, ${rows}, ${q(g.description)}, 'AirStrive', true, true${starts ? `, array[${starts.join(', ')}]` : ''})`,
+    `on conflict (id) do update set title = excluded.title, color = excluded.color, theme = excluded.theme, description = excluded.description,${starts ? ' starts = excluded.starts,' : ''} updated_at = now();`,
     '',
     `insert into public.grid_squares (grid_id, idx, prompt, cluster) values`,
     // The starter templates keep the band layout their boards began with.

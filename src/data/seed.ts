@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { STARTERS } from './starters';
-import { SIZES, bandOrder, placeClusters, startingSquares } from './types';
+import { SIZES, bandOrder, parseStarts, placeClusters, startsFor } from './types';
 import { markDirty } from '@/db/queue';
 import { newId, nowIso } from '@/lib/ids';
 import { starterSquareId, starterUserGridId } from '@/lib/uuid5';
@@ -14,9 +14,9 @@ export async function seedGridTemplates(db: SQLiteDatabase) {
     const { cols, rows } = SIZES[g.size];
     await db.withTransactionAsync(async () => {
       await db.runAsync(
-        `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, made_by, is_public, is_official, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AirStrive', 1, 1, ?)`,
-        g.id, g.title, g.color, g.theme, g.size, cols, rows, g.description, now,
+        `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, starts, made_by, is_public, is_official, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AirStrive', 1, 1, ?)`,
+        g.id, g.title, g.color, g.theme, g.size, cols, rows, g.description, parseStarts(g.size, g.starts)?.join(',') ?? '', now,
       );
       for (const sq of placeClusters(g, bandOrder(g.size))) {
         await db.runAsync(
@@ -72,13 +72,13 @@ export async function startGrid(
   gridId: string,
   opts: { id?: string; squareId?: (userGridId: string, idx: number) => string; startedAt?: string } = {},
 ) {
-  const grid = await db.getFirstAsync<{ size: keyof typeof SIZES; cols: number; rows: number }>(
-    'SELECT size, cols, rows FROM grids WHERE id = ?', gridId,
+  const grid = await db.getFirstAsync<{ size: keyof typeof SIZES; cols: number; rows: number; starts: string }>(
+    'SELECT size, cols, rows, starts FROM grids WHERE id = ?', gridId,
   );
   if (!grid) throw new Error('grid not found');
   const now = nowIso();
   const userGridId = opts.id ?? newId();
-  const revealed = new Set(startingSquares(grid.size));
+  const revealed = new Set(startsFor(grid.size, grid.starts));
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       'INSERT INTO user_grids (id, grid_id, freebies_left, started_at, updated_at) VALUES (?, ?, ?, ?, ?)',
