@@ -11,7 +11,10 @@ const on = new Set(
 );
 
 /** Add a flag's name here before using it, so a typo is a type error. */
-export type Flag = never;
+export type Flag =
+  /** "Continue with email" on iPhone, where Sign in with Apple covers everyone without it. Needs
+   *  custom SMTP on that environment's Supabase project, or the code email never arrives. */
+  | 'emailSignIn';
 
 export function flag(name: Flag): boolean {
   return on.has(name);
