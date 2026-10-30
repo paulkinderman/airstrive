@@ -1,14 +1,16 @@
 import { Pressable, Text as RNText, TextInput, View } from 'react-native';
-import { colors, fonts, gridColors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 /**
  * How squares look. A grid picks the icon on its revealed squares ('' is the dot in the
- * grid's color), and a moment picks how its done square fills when it has no photo
- * ('' is the grid's color, '#rrggbb' another color, anything else an emoji).
+ * grid's color), and a moment picks how its done square fills when it has no photo:
+ * '' is the grid's color, anything else an emoji on the grid's color. A square always
+ * takes its grid's color, so one board never mixes colors.
  */
 export const REVEAL_ICONS = ['⭐', '❓', '✨', '👀', '🎁', '🔓', '🌱', '🔥', '📍', '💡'];
 export const FILL_EMOJIS = ['✅', '⭐', '❤️', '🎉', '🏆', '😊', '🔥', '🌈', '🙌', '💪'];
 
+/** Early builds could save a '#rrggbb' fill; it now shows as the grid's color. */
 export const isColorFill = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
 /** The last character typed, keeping emoji built from several code points whole. */
@@ -41,23 +43,21 @@ export function RevealMark({ icon, color, size }: { icon: string; color: string;
 
 /** Background color of a done square with no photo, and the emoji on it if any. */
 export function fillLook(fill: string, color: string): { bg: string; emoji: string } {
-  if (!fill) return { bg: color, emoji: '' };
-  if (isColorFill(fill)) return { bg: fill, emoji: '' };
-  return { bg: color, emoji: fill };
+  return { bg: color, emoji: fill && !isColorFill(fill) ? fill : '' };
 }
 
 const CELL = 44;
 
 /**
- * A row of choices for a square's look: the default, then (for fills) the grid colors,
- * then emoji, then a square to type any emoji into.
+ * A row of choices for a square's look: the default, then emoji, then a square to type
+ * any emoji into.
  */
 export function SquareLookPicker({
   kind, value, onChange, color,
 }: { kind: 'reveal' | 'fill'; value: string; onChange: (v: string) => void; color: string }) {
   const emojis = kind === 'reveal' ? REVEAL_ICONS : FILL_EMOJIS;
-  const swatches = kind === 'fill' ? gridColors.filter((c) => c !== color) : [];
-  const custom = value && !isColorFill(value) && !emojis.includes(value) ? value : '';
+  if (isColorFill(value)) value = '';
+  const custom = value && !emojis.includes(value) ? value : '';
 
   const cell = (on: boolean, bg: string, dashed = false) => ({
     width: CELL, height: CELL, borderRadius: 12, alignItems: 'center' as const, justifyContent: 'center' as const,
@@ -77,15 +77,6 @@ export function SquareLookPicker({
       >
         {kind === 'reveal' && <RevealMark icon="" color={color} size={CELL} />}
       </Pressable>
-      {swatches.map((hex) => (
-        <Pressable
-          key={hex}
-          onPress={() => onChange(hex)}
-          accessibilityLabel={`Color ${hex}`}
-          accessibilityState={{ selected: value === hex }}
-          style={cell(value === hex, hex)}
-        />
-      ))}
       {emojis.map((e) => (
         <Pressable
           key={e}
