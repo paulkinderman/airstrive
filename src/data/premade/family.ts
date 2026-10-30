@@ -1,8 +1,8 @@
 import type { StarterGrid } from '../types';
 
 /**
- * Paul's grid for his family's Thanksgiving in Alpharetta. It is a private grid to share
- * with the family, so it is not in PREMADE and does not go in the Atlas.
+ * Paul's grid for his family to fill in on the way to Thanksgiving in Alpharetta. It is
+ * seeded as an official Atlas grid alongside PREMADE.
  */
 export const kinderMemories: StarterGrid = {
   id: 'grid_kinder_memories',
@@ -10,7 +10,7 @@ export const kinderMemories: StarterGrid = {
   color: '#C4612D',
   theme: 'Family',
   size: 'tiny',
-  description: 'Thanksgiving in Alpharetta, all of us together. Start before the trip and be ridiculous along the way.',
+  description: 'Getting ready for Thanksgiving in Alpharetta, all of us together. Start now and be ridiculous along the way.',
   clusters: [
     {
       name: 'Getting there',
@@ -23,13 +23,13 @@ export const kinderMemories: StarterGrid = {
       ],
     },
     {
-      name: 'Thanksgiving Day',
+      name: 'Before the trip',
       prompts: [
-        'Show up to dinner in a turkey hat',
-        'Say what you are grateful for this year',
-        'Give a dramatic reading of the menu',
-        'Take a photo of the whole table',
-        'Have pie for breakfast the morning after Thanksgiving',
+        'Practice your best turkey gobble',
+        'Call a cousin you will see there',
+        'Start a countdown in the family chat',
+        'Text the family a throwback photo',
+        'Pick a dish to bring and keep it secret',
       ],
     },
     {
@@ -45,10 +45,10 @@ export const kinderMemories: StarterGrid = {
     {
       name: 'Keep the memories',
       prompts: [
-        'Write down the funniest quote of the trip',
+        'Ask a grandparent to save a story for you',
         'Record a grandparent telling a story',
         'Do your best impression of another Kinderman',
-        'Hand out awards for the funniest moments',
+        'Nominate someone for a made-up family award',
         'Start a new Kinderman tradition',
       ],
     },

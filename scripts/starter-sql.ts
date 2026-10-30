@@ -4,13 +4,18 @@
  *
  *   npx tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql
  *   npx tsx scripts/starter-sql.ts premade > supabase/migrations/20261030035836_premade_grids.sql
+ *
+ * Grid ids after `premade` limit it to those grids, for a migration that changes only them.
  */
 import { STARTERS } from '../src/data/starters';
 import { PREMADE } from '../src/data/premade';
 import { kinderMemories } from '../src/data/premade/family';
 import { SIZES, placeClusters } from '../src/data/types';
 
-const grids = process.argv[2] === 'premade' ? [...PREMADE, kinderMemories] : STARTERS;
+const only = process.argv.slice(3);
+const grids = process.argv[2] === 'premade'
+  ? [...PREMADE, kinderMemories].filter((g) => only.length === 0 || only.includes(g.id))
+  : STARTERS;
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
 const out: string[] = [
