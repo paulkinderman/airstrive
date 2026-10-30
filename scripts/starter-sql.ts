@@ -3,7 +3,7 @@
  * code as the app so every square index matches the device.
  *
  *   npx tsx scripts/starter-sql.ts > supabase/migrations/20261025000002_starter_grids.sql
- *   npx tsx scripts/starter-sql.ts premade > supabase/migrations/20261030050000_premade_grids.sql
+ *   npx tsx scripts/starter-sql.ts premade > supabase/migrations/20261030035836_premade_grids.sql
  */
 import { STARTERS } from '../src/data/starters';
 import { PREMADE } from '../src/data/premade';
