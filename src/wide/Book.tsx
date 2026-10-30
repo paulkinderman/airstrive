@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -11,11 +14,15 @@ import { chapterCaption } from '@/lib/printables';
 import { shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { MomentWords } from '@/groups/MomentWords';
+import { CoverFace, bookItems, isCover, useBookInfo, type BookItem } from '@/lane/Covers';
 import { colors, fonts } from '@/theme';
+
+const TURN_MS = 700;
 
 /**
  * Memory Lane on a computer screen: an open book, two pages at a time, oldest first like the
- * printed scrapbook. Arrow keys turn the spread; Escape goes back to the index.
+ * printed scrapbook, between a front and a back cover. A `startKey` of 'cover' opens it closed. Arrow keys, the arrows beside the book or dragging a page across turn it
+ * over the spine; Escape goes back to the index.
  */
 export function Book({ startKey }: { startKey: string }) {
   const db = useSQLiteContext();
@@ -31,10 +38,11 @@ export function Book({ startKey }: { startKey: string }) {
       setFocused(true);
       listPages(db).then((all) => {
         const ordered = [...all].reverse();
+        const slots = spreadSlots(ordered);
         setPages(ordered);
         setLeft((cur) => {
-          if (cur > 0 && cur < ordered.length) return cur;
-          const i = Math.max(0, ordered.findIndex((p) => p.key === startKey));
+          if (cur > 0 && cur < slots.length) return cur;
+          const i = Math.max(0, slots.findIndex((x) => x?.key === startKey));
           return i - (i % 2);
         });
       });
@@ -42,13 +50,38 @@ export function Book({ startKey }: { startKey: string }) {
     }, [db, startKey, version]),
   );
 
-  const count = pages?.length ?? 0;
-  const turn = useCallback((dir: 1 | -1) => {
-    setLeft((l) => {
-      const next = l + dir * 2;
-      return next < 0 || next >= count ? l : next;
+  const slots = spreadSlots(pages ?? []);
+  const count = slots.length;
+  const info = useBookInfo(pages ? [...pages].reverse() : null);
+  // The leaf being turned: 1 lifts the right page over to the left, -1 the left page back. `drag` follows a pointer.
+  const [turning, setTurning] = useState<{ dir: 1 | -1; drag: boolean } | null>(null);
+  const p = useSharedValue(0);
+  const busy = useRef(false);
+
+  const land = useCallback((dir: 1 | -1, done: boolean) => {
+    if (done) setLeft((l) => l + dir * 2);
+    setTurning(null);
+    busy.current = false;
+  }, []);
+
+  const settle = useCallback((dir: 1 | -1, done: boolean, from: number) => {
+    p.value = withTiming(done ? 1 : 0, { duration: TURN_MS * (done ? 1 - from : from) + 120, easing: from === 0 ? Easing.inOut(Easing.cubic) : Easing.out(Easing.cubic) }, (ok) => {
+      if (ok) scheduleOnRN(land, dir, done);
     });
-  }, [count]);
+  }, [land, p]);
+
+  const turn = useCallback((dir: 1 | -1, drag = false) => {
+    if (busy.current || (dir === 1 ? left + 2 >= count : left === 0)) return false;
+    busy.current = true;
+    p.value = 0;
+    setTurning({ dir, drag });
+    return true;
+  }, [left, count, p]);
+
+  // A turn from a key or an arrow plays as soon as the leaf is up.
+  useEffect(() => {
+    if (turning && !turning.drag) settle(turning.dir, true, 0);
+  }, [turning, settle]);
 
   useEffect(() => {
     if (!focused) return;
@@ -66,7 +99,22 @@ export function Book({ startKey }: { startKey: string }) {
 
   const pageW = Math.floor(Math.min((width - 200) / 2, (height - 150) / 1.32, 600));
   const pageH = Math.floor(pageW * 1.32);
-  const spread = [pages[left] ?? null, pages[left + 1] ?? null];
+
+  const face = (i: number, side: 0 | 1) => {
+    const pg = slots[i] ?? null;
+    // Beside a closed book there's only the table.
+    if (!pg) return <View style={{ width: pageW, height: pageH }} />;
+    return (
+      <View style={[styles.page, { width: pageW, height: pageH }, side === 0 ? styles.leftPage : styles.rightPage]}>
+        {isCover(pg)
+          ? <CoverFace kind={pg.kind} info={info} width={pageW} spine={side === 0 ? 'right' : 'left'} />
+          : pg.kind === 'moment' ? <MomentPage moment={pg.moment} width={pageW} /> : <ChapterPage chapter={pg.chapter} width={pageW} />}
+        {!isCover(pg) && <Text variant="caption" style={[styles.folio, side === 0 ? { left: 24 } : { right: 24 }]}>{pages.indexOf(pg) + 1}</Text>}
+      </View>
+    );
+  };
+  // What lies on the book under the turning leaf.
+  const under = turning?.dir === 1 ? [left, left + 3] : turning?.dir === -1 ? [left - 2, left + 1] : [left, left + 1];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.scrap }}>
@@ -75,26 +123,91 @@ export function Book({ startKey }: { startKey: string }) {
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.scrapInk} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           <Text variant="bodyBold" style={{ color: colors.scrapInk }}>Index</Text>
         </Pressable>
-        <Text variant="label" style={{ color: colors.scrapInk }}>Memory Lane · {count} page{count === 1 ? '' : 's'}</Text>
+        <Text variant="label" style={{ color: colors.scrapInk }}>Memory Lane · {pages.length} page{pages.length === 1 ? '' : 's'}</Text>
         <View style={{ width: 90 }} />
       </View>
 
       <View style={styles.stage}>
         <Arrow dir="prev" disabled={left === 0} onPress={() => turn(-1)} />
-        <View style={[styles.book, { width: pageW * 2 + 2, height: pageH }]}>
-          {spread.map((p, i) => (
-            <View key={i} style={[styles.page, { width: pageW, height: pageH }, i === 0 ? styles.leftPage : styles.rightPage]}>
-              {p ? (p.kind === 'moment' ? <MomentPage moment={p.moment} width={pageW} /> : <ChapterPage chapter={p.chapter} width={pageW} />) : <EndPaper />}
-              {p && <Text variant="caption" style={[styles.folio, i === 0 ? { left: 24 } : { right: 24 }]}>{left + i + 1}</Text>}
-            </View>
-          ))}
-          <View style={[styles.spine, { left: pageW - 6, height: pageH }]} pointerEvents="none" />
-        </View>
+        <BookDrag pageW={pageW} p={p} turn={turn} settle={settle}>
+          <View style={[styles.book, { width: pageW * 2 + 2, height: pageH }]}>
+            {face(under[0], 0)}
+            {face(under[1], 1)}
+            <Shadow p={p} onLeft={turning?.dir !== -1} width={pageW} height={pageH} on={!!turning && !!slots[turning.dir === 1 ? under[0] : under[1]]} />
+            {turning && (
+              <Leaf key={`${left}:${turning.dir}`} dir={turning.dir} p={p} width={pageW} height={pageH}
+                front={face(turning.dir === 1 ? left + 1 : left, turning.dir === 1 ? 1 : 0)}
+                back={face(turning.dir === 1 ? left + 2 : left - 1, turning.dir === 1 ? 0 : 1)} />
+            )}
+            {slots[under[0]] && slots[under[1]] && <View style={[styles.spine, { left: pageW - 6, height: pageH }]} pointerEvents="none" />}
+          </View>
+        </BookDrag>
         <Arrow dir="next" disabled={left + 2 >= count} onPress={() => turn(1)} />
       </View>
-      <Text variant="caption" style={{ textAlign: 'center', color: colors.scrapInk, paddingBottom: 16 }}>← → to turn the page · Esc for the index</Text>
+      <Text variant="caption" style={{ textAlign: 'center', color: colors.scrapInk, paddingBottom: 16 }}>← → or drag a page to turn it · Esc for the index</Text>
     </View>
   );
+}
+
+/** Dragging across the book turns a page: leftward the right-hand one, rightward the left-hand one. */
+function BookDrag({ pageW, p, turn, settle, children }: {
+  pageW: number; p: SharedValue<number>; children: ReactNode;
+  turn: (dir: 1 | -1, drag: boolean) => boolean; settle: (dir: 1 | -1, done: boolean, from: number) => void;
+}) {
+  const dir = useSharedValue(0);
+  const start = (d: 1 | -1) => { dir.value = turn(d, true) ? d : 0; };
+  const pan = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .onStart((e) => { dir.value = 0; scheduleOnRN(start, e.translationX < 0 ? 1 : -1); })
+    .onUpdate((e) => {
+      if (dir.value === 0) return;
+      p.value = Math.max(0, Math.min(1, (-e.translationX * dir.value) / (pageW * 1.8)));
+    })
+    .onEnd((e) => {
+      if (dir.value === 0) return;
+      const d = dir.value as 1 | -1;
+      const done = p.value > 0.3 || -e.velocityX * d > 600;
+      scheduleOnRN(settle, d, done, p.value);
+      dir.value = 0;
+    });
+  return <GestureDetector gesture={pan}>{children}</GestureDetector>;
+}
+
+/**
+ * The page being turned, hinged on the spine. Its front is the page it lifts off; past
+ * halfway you see its back, the page that lands on the other side.
+ */
+function Leaf({ dir, p, width, height, front, back }: { dir: 1 | -1; p: SharedValue<number>; width: number; height: number; front: ReactNode; back: ReactNode }) {
+  const leaf = useAnimatedStyle(() => ({
+    transform: [{ perspective: 2600 }, { rotateY: `${-dir * p.value * 180}deg` }],
+  }));
+  const frontStyle = useAnimatedStyle(() => ({ opacity: p.value < 0.5 ? 1 : 0 }));
+  const backStyle = useAnimatedStyle(() => ({ opacity: p.value < 0.5 ? 0 : 1 }));
+  // Darkest when the page stands up on its edge, as it leaves the light.
+  const shade = useAnimatedStyle(() => ({ opacity: 0.35 * Math.sin(p.value * Math.PI) }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', top: 0, width, height, left: dir === 1 ? width + 2 : 0, transformOrigin: dir === 1 ? 'left center' : 'right center' }, leaf]}
+    >
+      <Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>{front}</Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scaleX: -1 }] }, backStyle]}>{back}</Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.leafShade, shade]} />
+    </Animated.View>
+  );
+}
+
+/** The shadow the turning leaf throws on the page it's about to cover. */
+function Shadow({ p, onLeft, width, height, on }: { p: SharedValue<number>; onLeft: boolean; width: number; height: number; on: boolean }) {
+  const style = useAnimatedStyle(() => ({ opacity: on ? 0.14 * Math.sin(p.value * Math.PI) : 0 }));
+  return <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, height, width, left: onLeft ? 0 : width + 2, backgroundColor: '#2B2216' }, style]} />;
+}
+
+/** The book laid out in spreads: nothing left of the closed front cover, and nothing right of the back one. */
+function spreadSlots(pagesOldestFirst: Page[]): (BookItem | null)[] {
+  const slots: (BookItem | null)[] = [null, ...bookItems(pagesOldestFirst, true)];
+  if (slots.length % 2) slots.push(null);
+  return slots;
 }
 
 function MomentPage({ moment: m, width }: { moment: Moment; width: number }) {
@@ -129,7 +242,7 @@ function MomentPage({ moment: m, width }: { moment: Moment; width: number }) {
       {m.body || m.entries.length > 0
         ? <MomentWords moment={m} style={!cover && { lineHeight: 36 }} />
         : <Text variant="hand" style={{ color: colors.faint }}>No words this time.</Text>}
-      {(m.place || m.weather || m.withPeople) && (
+      {!!(m.place || m.weather || m.withPeople) && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[m.place, m.weather, m.withPeople && `With ${m.withPeople}`].filter(Boolean).map((t) => (
             <View key={t as string} style={styles.tag}><Text variant="caption" style={{ color: colors.scrapInk, fontFamily: fonts.bodyBold }}>{t}</Text></View>
@@ -172,14 +285,6 @@ function ChapterPage({ chapter: c, width }: { chapter: Chapter; width: number })
   );
 }
 
-function EndPaper() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-      <Text variant="hand" style={{ color: colors.scrapInk, textAlign: 'center' }}>The next page is still out there.</Text>
-    </View>
-  );
-}
-
 function Arrow({ dir, disabled, onPress }: { dir: 'prev' | 'next'; disabled: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} disabled={disabled} style={[styles.arrow, disabled && { opacity: 0.25 }]} accessibilityLabel={dir === 'prev' ? 'Previous pages' : 'Next pages'}>
@@ -194,17 +299,18 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 28, paddingTop: 16, paddingBottom: 8 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, width: 90 },
   stage: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
-  book: {
-    flexDirection: 'row', gap: 2,
-    shadowColor: '#8A7B63', shadowOpacity: 0.35, shadowRadius: 40, shadowOffset: { width: 0, height: 18 },
+  book: { flexDirection: 'row', gap: 2 },
+  page: {
+    backgroundColor: '#FFFDF8', overflow: 'hidden',
+    shadowColor: '#8A7B63', shadowOpacity: 0.3, shadowRadius: 30, shadowOffset: { width: 0, height: 16 },
   },
-  page: { backgroundColor: '#FFFDF8', overflow: 'hidden' },
   leftPage: { borderTopLeftRadius: 10, borderBottomLeftRadius: 10 },
   rightPage: { borderTopRightRadius: 10, borderBottomRightRadius: 10 },
   spine: {
     position: 'absolute', top: 0, width: 14, backgroundColor: 'rgba(138,123,99,0.10)',
   },
   folio: { position: 'absolute', bottom: 14, color: colors.scrapInk },
+  leafShade: { backgroundColor: '#2B2216' },
   edit: { position: 'absolute', top: 10, right: 10, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   polaroid: { backgroundColor: '#fff', padding: 10, shadowColor: colors.ink, shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 8 } },
   tape: { position: 'absolute', top: 0, width: 70, height: 22, backgroundColor: 'rgba(245,182,28,0.55)', transform: [{ rotate: '3deg' }] },
