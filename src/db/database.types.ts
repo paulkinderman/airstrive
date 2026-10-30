@@ -204,6 +204,7 @@ export type Database = {
           rows: number
           server_updated_at: string
           shared_at: string | null
+          starts: number[] | null
           size: string
           theme: string
           title: string
@@ -226,6 +227,7 @@ export type Database = {
           rows: number
           server_updated_at?: string
           shared_at?: string | null
+          starts?: number[] | null
           size: string
           theme: string
           title: string
@@ -248,6 +250,7 @@ export type Database = {
           rows?: number
           server_updated_at?: string
           shared_at?: string | null
+          starts?: number[] | null
           size?: string
           theme?: string
           title?: string
@@ -902,6 +905,7 @@ export type Database = {
           shared_at: string
           size: string
           starters: string[]
+          starts: number[]
           theme: string
           title: string
           updated_at: string

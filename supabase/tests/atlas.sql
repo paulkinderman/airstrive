@@ -21,7 +21,7 @@ do $$ begin
     '{"id":"a0000000-0000-4000-8000-000000000001","title":"Piano","color":"#9C8CB8","theme":"Making","size":"tiny","description":"","is_public":true,"updated_at":"2026-10-26T10:00:00Z"}',
     pg_temp.squares(20)) = 'saved', 'creates a shared grid';
   assert public.save_grid(
-    '{"id":"a0000000-0000-4000-8000-000000000002","title":"Pottery","color":"#D4A190","theme":"Making","size":"tiny","is_public":true,"updated_at":"2026-10-26T10:00:00Z"}',
+    '{"id":"a0000000-0000-4000-8000-000000000002","title":"Pottery","color":"#D4A190","theme":"Making","size":"tiny","starts":"19,0","is_public":true,"updated_at":"2026-10-26T10:00:00Z"}',
     pg_temp.squares(20)) = 'saved', 'creates a second';
   assert public.save_grid(
     '{"id":"a0000000-0000-4000-8000-000000000003","title":"Secret","color":"#2EB08A","theme":"Mind","size":"tiny","is_public":false,"updated_at":"2026-10-26T10:00:00Z"}',
@@ -32,6 +32,37 @@ do $$ begin
   assert (select made_by from public.grids where id = 'a0000000-0000-4000-8000-000000000001') = 'Paulk', 'credited to the username';
   assert (select count(*) from public.grid_squares where grid_id = 'a0000000-0000-4000-8000-000000000001') = 20, 'squares saved';
   assert (select shared_at is not null from public.grids where id = 'a0000000-0000-4000-8000-000000000001'), 'shared_at set';
+end $$;
+
+-- A creator can pick the starting squares, as the phone's '19,0' or a JSON array: one to a
+-- quarter of the board, each on it once. None, or '', is the usual ones.
+do $$ begin
+  assert (select starts from public.grids where id = 'a0000000-0000-4000-8000-000000000002') = array[19, 0], 'own starts saved';
+  assert (select starts from public.grids where id = 'a0000000-0000-4000-8000-000000000001') is null, 'no starts is the usual ones';
+  assert public.save_grid(
+    '{"id":"a0000000-0000-4000-8000-000000000004","title":"Kiln","color":"#D4A190","theme":"Making","size":"tiny","starts":[3],"is_public":false,"updated_at":"2026-10-26T10:00:00Z"}',
+    pg_temp.squares(20)) = 'saved', 'starts as a JSON array';
+  assert (select starts from public.grids where id = 'a0000000-0000-4000-8000-000000000004') = array[3], 'one starting square';
+  assert public.save_grid(
+    '{"id":"a0000000-0000-4000-8000-000000000005","title":"Glaze","color":"#D4A190","theme":"Making","size":"tiny","starts":"","is_public":false,"updated_at":"2026-10-26T10:00:00Z"}',
+    pg_temp.squares(20)) = 'saved', 'empty starts';
+  assert (select starts from public.grids where id = 'a0000000-0000-4000-8000-000000000005') is null, 'empty starts is the usual ones';
+end $$;
+
+do $$
+declare bad text;
+begin
+  foreach bad in array array['"0,1,2,3,4,5"', '"20"', '"-1"', '"4,4"', '[]'] loop
+    begin
+      perform public.save_grid(
+        ('{"id":"a0000000-0000-4000-8000-000000000008","title":"Bad","color":"#2EB08A","theme":"Mind","size":"tiny","starts":' || bad ||
+         ',"updated_at":"2026-10-26T10:00:00Z"}')::jsonb, pg_temp.squares(20));
+      if bad = '[]' then continue; end if;
+      raise exception 'starts % accepted', bad;
+    exception when raise_exception then
+      if sqlerrm like 'starts % accepted' then raise; end if;
+    end;
+  end loop;
 end $$;
 
 -- Wrong square counts and older writes are refused or ignored; squares never change.
@@ -83,6 +114,10 @@ do $$ begin
     (select array_agg(prompt order by idx) from public.grid_squares where grid_id = 'grid_fall' and idx in (20, 21, 26, 27)),
     'starters are the centre squares';
   assert (select cardinality(starters) from public.atlas_grids() where id = 'a0000000-0000-4000-8000-000000000001') = 5, 'tiny has five starters';
+  assert (select starts from public.atlas_grids() where id = 'a0000000-0000-4000-8000-000000000001') = array[9, 10, 12, 13, 14], 'usual starts listed';
+  assert (select starts from public.atlas_grids() where id = 'a0000000-0000-4000-8000-000000000002') = array[19, 0], 'own starts listed';
+  assert (select starters from public.atlas_grids() where id = 'a0000000-0000-4000-8000-000000000002') = array['Square 0', 'Square 19'],
+    'starters are the creator''s squares';
   begin
     perform public.save_grid('{"id":"a0000000-0000-4000-8000-000000000001","title":"Mine now","color":"#9C8CB8","theme":"Making","size":"tiny","is_public":true,"updated_at":"2026-10-27T10:00:00Z"}', '[]');
     raise exception 'edited someone else''s grid';

@@ -56,10 +56,10 @@ export const TABLES: Record<SyncedTable, Column[]> = {
   ]),
 };
 
-/** What save_grid() takes for a grid the person made. Squares go separately. */
+/** What save_grid() takes for a grid the person made. Squares go separately; starts is '9,10,12' or ''. */
 export const GRID_PUSH: Column[] = on('grids', [
-  text('id'), text('title'), text('color'), text('theme'), text('size'), text('description'), text('reveal_icon'), bool('is_public'),
-  ts('updated_at'),
+  text('id'), text('title'), text('color'), text('theme'), text('size'), text('description'), text('reveal_icon'), text('starts'),
+  bool('is_public'), ts('updated_at'),
 ]);
 
 export const columnNames = (table: SyncedTable) => TABLES[table].map((c) => c.name);

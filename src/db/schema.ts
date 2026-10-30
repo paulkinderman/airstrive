@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { seedGridTemplates } from '@/data/seed';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** v0's schema, kept as-is so phones that ran v0 upgrade through the same path. */
 export const V1 = `
@@ -212,6 +212,11 @@ const V6 = `
   ALTER TABLE moments ADD COLUMN fill TEXT NOT NULL DEFAULT '';
 `;
 
+/** A grid's own starting squares, as '9,10,12'. '' starts it on the usual squares. */
+const V7 = `
+  ALTER TABLE grids ADD COLUMN starts TEXT NOT NULL DEFAULT '';
+`;
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -263,6 +268,14 @@ export async function migrate(db: SQLiteDatabase) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(V6);
       await db.execAsync('PRAGMA user_version = 6');
+    });
+    current = 6;
+  }
+
+  if (current < 7) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(V7);
+      await db.execAsync('PRAGMA user_version = 7');
     });
   }
 

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, View, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { SIZES, startingSquares } from '@/data/types';
+import { SIZES, startsFor } from '@/data/types';
 import { Text } from '@/ui/Text';
 import { colors, radius } from '@/theme';
 import type { AtlasGrid } from './picks';
@@ -18,7 +18,8 @@ export function GridPreview({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { cols, rows, freebies } = SIZES[grid.size];
-  const start = new Set(startingSquares(grid.size));
+  const start = new Set(startsFor(grid.size, grid.starts));
+  const count = start.size;
   const gap = 5;
   const cell = Math.min(30, Math.floor((width - 40 - gap * (cols - 1)) / cols));
   const by = grid.isOfficial ? 'AirStrive' : grid.madeBy;
@@ -56,13 +57,13 @@ export function GridPreview({
             ))}
           </View>
           <Text variant="caption">
-            You start with the {grid.size === 'tiny' ? 'two middle squares' : 'four center squares'} revealed. The rest you find.
+            You start with {count === 1 ? 'one square' : `${COUNT_WORDS[count] ?? count} squares`} revealed. The rest you find.
           </Text>
         </View>
 
         {grid.starters.length > 0 && (
           <View style={{ paddingHorizontal: 20, gap: 10 }}>
-            <Text variant="label">Your first {grid.size === 'tiny' ? 'two' : 'four'}</Text>
+            <Text variant="label">{count === 1 ? 'Your first square' : `Your first ${COUNT_WORDS[count] ?? count}`}</Text>
             {grid.starters.map((s) => (
               <View key={s} style={styles.starter}>
                 <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: grid.color }} />
@@ -76,6 +77,8 @@ export function GridPreview({
     </View>
   );
 }
+
+const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 22, gap: 8 },
