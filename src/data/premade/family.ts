@@ -25,7 +25,7 @@ export const kinderMemories: StarterGrid = {
     {
       name: 'Thanksgiving Day',
       prompts: [
-        'Show up in a ridiculous turkey hat',
+        'Show up to dinner in a turkey hat',
         'Say what you are grateful for this year',
         'Give a dramatic reading of the menu',
         'Take a photo of the whole table',
