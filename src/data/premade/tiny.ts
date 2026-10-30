@@ -465,16 +465,16 @@ export const workHolidayParty: StarterGrid = {
   color: '#F0634A',
   theme: 'People',
   size: 'tiny',
-  description: 'Festive, friendly and office safe. One evening with the people you see all year.',
+  description: 'Dinner and drinks in London with the whole team. Festive, friendly and office safe.',
   clusters: [
     {
       name: 'Arrive',
       prompts: [
-        'Wear something festive but office safe',
-        'Arrive on time, or fashionably close',
-        'Meet someone from another team',
-        'Find the coworker you only know from email',
-        'Compliment someone on their outfit',
+        'Wear your best festive jumper',
+        'Brave the Tube in your party clothes',
+        'Snap the Christmas lights on the way',
+        'Get the first round in',
+        'Say hello to everyone on the team',
       ],
     },
     {
@@ -482,19 +482,19 @@ export const workHolidayParty: StarterGrid = {
       prompts: [
         'Learn what a coworker does outside work',
         'Sit next to someone you rarely talk to',
-        'Ask a manager about their first job',
+        'Ask a colleague for their best London find',
         "Find out someone's favorite holiday tradition",
-        'Swap a favorite show recommendation',
+        'Learn where everyone is off to for the holidays',
       ],
     },
     {
       name: 'Fun',
       prompts: [
-        'Enter the raffle and hope',
-        'Survive the white elephant gift swap',
+        'Pull a cracker and wear the paper crown',
+        'Read the worst cracker joke out loud',
         'Get in a group photo with your team',
-        'Take a turn at karaoke, or cheer loudly',
-        'Try every dessert on the table',
+        'Have a mince pie, or a second one',
+        'Order something new from the drinks menu',
       ],
     },
     {
@@ -502,9 +502,9 @@ export const workHolidayParty: StarterGrid = {
       prompts: [
         'Thank someone who made your year easier',
         'Toast a coworker who had a big year',
-        'Help clean up before you leave',
-        'Make sure everyone has a ride home',
-        'Send a thank you to the organizers',
+        'Settle the bill without any fuss',
+        'Get everyone onto a night bus or a cab',
+        'Share the best photos in the team chat',
       ],
     },
   ],
