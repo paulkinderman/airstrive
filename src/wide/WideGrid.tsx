@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -49,15 +49,22 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
   const version = useDataVersion();
   const together = useTogetherLine(board?.groupId ?? null);
 
+  // A square is picked for you once, on an unfinished grid. A finished grid opens on the whole board,
+  // and a square you put down stays down.
+  const autoPicked = useRef(!!select);
+
   const reload = useCallback(async () => {
     const b = await loadBoard(db, id);
     setBoard(b);
-    if (b && !selected) {
-      const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
-      setSelected(first?.squareStateId ?? null);
+    if (b && !autoPicked.current) {
+      autoPicked.current = true;
+      if (!b.completedAt) {
+        const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
+        setSelected(first?.squareStateId ?? null);
+      }
     }
     return b;
-  }, [db, id, selected, version]);
+  }, [db, id, version]);
 
   // Coming back to a group grid checks for what the others added.
   useFocusEffect(useCallback(() => {
@@ -85,7 +92,10 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
       if (document.querySelector('.as-alert-backdrop')) return;
       const i = board.squares.findIndex((s) => s.squareStateId === selected);
       const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -board.cols, ArrowDown: board.cols }[e.key];
-      if (step !== undefined) {
+      if (step !== undefined && i < 0) {
+        e.preventDefault();
+        setSelected(board.squares[0]?.squareStateId ?? null);
+      } else if (step !== undefined) {
         e.preventDefault();
         const col = i % board.cols;
         if ((e.key === 'ArrowLeft' && col === 0) || (e.key === 'ArrowRight' && col === board.cols - 1)) return;
@@ -94,6 +104,9 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
       } else if (e.key === 'Enter' && sq) {
         e.preventDefault();
         logOrOpen(sq);
+      } else if (e.key === 'Escape' && sq) {
+        e.preventDefault();
+        setSelected(null);
       } else if (e.key === 'm' || e.key === 'M') {
         setMosaic(true);
       }
@@ -208,7 +221,7 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
               <Tile
                 key={s.squareStateId} square={s} size={cell} color={board.color} revealIcon={board.revealIcon}
                 selected={s.squareStateId === selected}
-                onPress={() => { setSelected(s.squareStateId); setHovered(null); }}
+                onPress={() => { setSelected((cur) => (cur === s.squareStateId ? null : s.squareStateId)); setHovered(null); }}
                 onHover={(on) => setHovered((h) => (on ? s.squareStateId : h === s.squareStateId ? null : h))}
               />
             ))}
@@ -219,13 +232,15 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
             )}
           </View>
           <Text variant="caption" style={{ color: colors.muted, paddingTop: 16 }}>
-            Arrow keys to move · Enter to {sq?.state === 'done' ? 'open the page' : 'log a moment'} · M for the mosaic
+            Arrow keys to move · Enter to {sq?.state === 'done' ? 'open the page' : 'log a moment'}{sq ? ' · Esc to put it down' : ''} · M for the mosaic
           </Text>
         </View>
 
         <View style={styles.panel}>
           <ScrollView contentContainerStyle={{ padding: 24, gap: 10 }}>
-            {sq ? <SquarePanel square={sq} color={board.color} freebiesLeft={board.freebiesLeft} onAct={() => logOrOpen(sq)} onFreebie={() => onFreebie(sq)} /> : null}
+            {sq ? <SquarePanel square={sq} color={board.color} freebiesLeft={board.freebiesLeft} onAct={() => logOrOpen(sq)} onFreebie={() => onFreebie(sq)} /> : (
+              <Text variant="body" style={{ color: colors.muted }}>Pick a square to see it here.</Text>
+            )}
           </ScrollView>
         </View>
       </View>

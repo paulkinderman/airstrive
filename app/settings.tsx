@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -24,6 +24,17 @@ function ago(iso: string | null) {
   return new Date(iso).toLocaleDateString();
 }
 
+/** True only once `on` has held for `ms`, so a quick sync doesn't flash a spinner. */
+function useSettled(on: boolean, ms: number) {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (!on) { setSettled(false); return; }
+    const t = setTimeout(() => setSettled(true), ms);
+    return () => clearTimeout(t);
+  }, [on, ms]);
+  return settled;
+}
+
 export default function Settings() {
   const db = useSQLiteContext();
   const router = useRouter();
@@ -31,6 +42,7 @@ export default function Settings() {
   const auth = useAuth();
   const sync = useSync();
   const [exporting, setExporting] = useState<string | null>(null);
+  const slowSync = useSettled(sync.running, 800);
 
   useFocusEffect(useCallback(() => { void sync.syncNow(); }, [sync.syncNow]));
   const blocked = useLoad(() => (auth.configured ? listBlocked() : Promise.resolve([])), [auth.configured]);
@@ -119,12 +131,12 @@ export default function Settings() {
         <View style={styles.card}>
           <Text variant="label">Backup</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {sync.running && <ActivityIndicator size="small" color={colors.muted} />}
+            {slowSync && <ActivityIndicator size="small" color={colors.muted} />}
             <Text variant="body" style={{ flex: 1, color: sync.failed > 0 ? colors.danger : colors.ink }}>{syncLine}</Text>
           </View>
           {auth.configured && (sync.failed > 0
             ? <Button label="Try again" kind="secondary" onPress={sync.retry} />
-            : <Button label="Sync now" kind="secondary" onPress={sync.syncNow} disabled={sync.running} />)}
+            : <Button label="Sync now" kind="secondary" onPress={sync.syncNow} disabled={slowSync} />)}
         </View>
 
         <View style={styles.card}>

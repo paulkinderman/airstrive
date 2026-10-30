@@ -87,15 +87,15 @@ export function SyncProvider({ userId, children }: { userId: string | null; chil
     return () => { app.remove(); net.remove(); clearInterval(tick); };
   }, [userId, run, db]);
 
-  const api: SyncApi = {
-    ...state,
-    request,
-    syncNow: async () => {
-      while (running.current) await new Promise((r) => setTimeout(r, 200));
-      await run();
-    },
-    retry: async () => { await retryFailed(db); await run(); },
-  };
+  // Kept stable across renders: screens sync on focus with these as effect deps, and a
+  // fresh function each render made the settings screen sync again after every sync.
+  const syncNow = useCallback(async () => {
+    while (running.current) await new Promise((r) => setTimeout(r, 200));
+    await run();
+  }, [run]);
+  const retry = useCallback(async () => { await retryFailed(db); await run(); }, [db, run]);
+
+  const api = useMemo<SyncApi>(() => ({ ...state, request, syncNow, retry }), [state, request, syncNow, retry]);
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
 
