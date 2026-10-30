@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import type { Moment, Page } from '@/db/repo';
+import type { Moment } from '@/db/repo';
+import type { BookItem } from './Covers';
 import { goBack } from '@/lib/goBack';
 import { PageLink } from '@/ui/PageLink';
 import { MomentWords } from '@/groups/MomentWords';
@@ -13,7 +14,7 @@ import { colors, fonts } from '@/theme';
 import type { Turn } from './PageTurner';
 
 /** A moment's page in Memory Lane on a phone. */
-export function MomentSheet({ moment: m, page, prev, next, turn }: { moment: Moment; page: number; prev: Page | null; next: Page | null; turn: Turn }) {
+export function MomentSheet({ moment: m, page, prev, next, turn }: { moment: Moment; page: number; prev: BookItem | null; next: BookItem | null; turn: Turn }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();

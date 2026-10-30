@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Circle, Path } from 'react-native-svg';
-import type { Chapter, Page } from '@/db/repo';
+import type { Chapter } from '@/db/repo';
+import type { BookItem } from './Covers';
 import { readBase64 } from '@/lib/files';
 import { chapterCaption, posterHtml } from '@/lib/printables';
 import { printHtml, shareHtmlAsPdf } from '@/lib/share';
@@ -30,7 +31,7 @@ async function posterFor(c: Chapter) {
 }
 
 /** The page Memory Lane adds when a grid is finished: the whole mosaic, framed. */
-export function ChapterSheet({ chapter: c, page, prev, next, turn }: { chapter: Chapter; page: number; prev: Page | null; next: Page | null; turn: Turn }) {
+export function ChapterSheet({ chapter: c, page, prev, next, turn }: { chapter: Chapter; page: number; prev: BookItem | null; next: BookItem | null; turn: Turn }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
