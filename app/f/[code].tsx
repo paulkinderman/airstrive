@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { acceptCode, previewCode, type Person } from '@/friends/api';
 import { codeFrom } from '@/friends/links';
@@ -37,7 +38,7 @@ function Invite({ code }: { code: string | null }) {
     previewCode(code).then(setPerson).catch(() => setState('error'));
   }, [code]);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/profile'));
+  const close = () => goBack(router, '/profile');
 
   const accept = async () => {
     if (!code) return;

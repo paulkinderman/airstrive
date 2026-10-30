@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, View, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useAtlas } from '@/atlas/catalog';
@@ -65,7 +66,7 @@ export default function Picks() {
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 24, gap: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="Back">
+          <Pressable onPress={() => goBack(router, '/onboarding')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="Back">
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           </Pressable>
         </View>

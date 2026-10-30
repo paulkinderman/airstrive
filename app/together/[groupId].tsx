@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadBoard } from '@/db/repo';
@@ -103,7 +104,7 @@ export default function TogetherScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
+        <Pressable onPress={() => goBack(router, { pathname: '/grid/[id]', params: { id: groupId } })} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
         <Text variant="label">Doing it together</Text>
         <View style={styles.iconButton} />
       </View>

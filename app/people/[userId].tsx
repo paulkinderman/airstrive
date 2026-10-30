@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import {
@@ -54,7 +55,7 @@ export default function PersonProfile() {
     if (!p) return;
     Alert.alert(`Block ${p.username}?`, "You won't see each other's profiles or find each other in search, and they can't ask to be friends. They won't be told.", [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Block', style: 'destructive', onPress: async () => { await blockUser(p.id).catch(() => {}); router.back(); } },
+      { text: 'Block', style: 'destructive', onPress: async () => { await blockUser(p.id).catch(() => {}); goBack(router, '/profile'); } },
     ]);
   };
 
@@ -67,7 +68,7 @@ export default function PersonProfile() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
+        <Pressable onPress={() => goBack(router, '/profile')} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
         <Text variant="label">Profile</Text>
         {p && p.relation !== 'self' ? (
           <Pressable onPress={() => setMenuOpen(true)} style={styles.iconButton} accessibilityLabel="More">

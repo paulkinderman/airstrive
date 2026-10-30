@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, useWindowDimensions, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -51,7 +52,7 @@ export default function ChapterCover() {
     useCallback(() => {
       (async () => {
         const [chapter, all] = await Promise.all([getChapter(db, userGridId), listPages(db)]);
-        if (!chapter) { router.back(); return; }
+        if (!chapter) { goBack(router, '/lane'); return; }
         setC(chapter);
         const i = all.findIndex((p) => p.key === `chapter:${userGridId}`);
         setNav({ page: all.length - i, prev: all[i + 1] ?? null, next: all[i - 1] ?? null });

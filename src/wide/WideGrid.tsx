@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -150,7 +151,7 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
     }
     Alert.alert(`Remove ${board.title}?`, 'It comes off your shelf. You can add it again from the Atlas any time.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await removeFromShelf(db, id); sync.request(); router.back(); } },
+      { text: 'Remove', style: 'destructive', onPress: async () => { await removeFromShelf(db, id); sync.request(); goBack(router); } },
     ]);
   };
   const onShare = async () => { await setGridShared(db, board.gridId, !board.isPublic); sync.request(); reload(); };
@@ -177,7 +178,7 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={styles.top}>
-        <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
+        <Pressable onPress={() => goBack(router)} style={styles.back} accessibilityLabel="Back">
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           <Text variant="bodyBold">Grids</Text>
         </Pressable>

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { codeFrom } from '@/friends/links';
@@ -24,7 +25,7 @@ export default function Scan() {
         <Text variant="body" style={{ color: colors.muted }}>AirStrive needs the camera to read the QR code on their Profile.</Text>
         <View style={{ flex: 1 }} />
         <Button label="Allow the camera" onPress={requestPermission} />
-        <Button label="Cancel" kind="quiet" onPress={() => router.back()} />
+        <Button label="Cancel" kind="quiet" onPress={() => goBack(router, '/profile')} />
       </View>
     );
   }
@@ -47,7 +48,7 @@ export default function Scan() {
         <Text variant="title" style={{ color: '#fff', textAlign: 'center' }}>Point at their AirStrive QR code</Text>
         <View style={styles.frame} />
         {wrong && <Text variant="body" style={{ color: '#fff', textAlign: 'center' }}>That isn't an AirStrive friend code.</Text>}
-        <Button label="Cancel" kind="secondary" onPress={() => router.back()} style={{ alignSelf: 'stretch' }} />
+        <Button label="Cancel" kind="secondary" onPress={() => goBack(router, '/profile')} style={{ alignSelf: 'stretch' }} />
       </View>
     </View>
   );

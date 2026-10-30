@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Pressable, StyleSheet, ActivityIndicator, Share, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { myFriendCode } from '@/friends/api';
 import { friendLink } from '@/friends/links';
@@ -41,7 +42,7 @@ export default function MyCode() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
+        <Pressable onPress={() => goBack(router, '/profile')} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
         <Text variant="label">My QR code</Text>
         <View style={styles.iconButton} />
       </View>

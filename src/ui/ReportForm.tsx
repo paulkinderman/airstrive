@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ReportReason } from '@/atlas/catalog';
 import { Text } from './Text';
@@ -41,7 +42,7 @@ export function ReportForm({
         <Text variant="display">Thanks for telling us</Text>
         <Text variant="body" style={{ color: colors.muted }}>{state === 'sent' ? sentLine : alreadyLine}</Text>
         <View style={{ flex: 1 }} />
-        <Button label="Done" onPress={() => router.back()} />
+        <Button label="Done" onPress={() => goBack(router)} />
       </View>
     );
   }
@@ -76,7 +77,7 @@ export function ReportForm({
         {state === 'error' && <Text variant="caption" style={{ color: colors.danger }}>Couldn't send that. Check your connection and try again.</Text>}
         <View style={{ flex: 1 }} />
         <Button label={state === 'sending' ? 'Sending…' : 'Send report'} onPress={onSend} disabled={!reason || state === 'sending'} />
-        <Button label="Cancel" kind="quiet" onPress={() => router.back()} />
+        <Button label="Cancel" kind="quiet" onPress={() => goBack(router)} />
       </View>
     </KeyboardAvoidingView>
   );

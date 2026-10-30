@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
@@ -114,7 +115,7 @@ export default function Settings() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back">
+        <Pressable onPress={() => goBack(router, '/profile')} style={styles.iconButton} accessibilityLabel="Back">
           <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
         </Pressable>
         <Text variant="label">Settings</Text>
