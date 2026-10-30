@@ -63,11 +63,29 @@ In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.m
 
 ## Release to the App Store
 
-`eas.json` has a `production` profile: store distribution, build numbers kept by EAS and bumped on every build, and the `production` environment variables from expo.dev. The marketing version is `version` in `app.json`.
+Every merge to `main` that touches the app builds for iOS on EAS and uploads the build to App Store Connect, where it reaches TestFlight's internal testers (`.github/workflows/testflight.yml`). Nothing goes to App Store review by itself: you pick a TestFlight build in App Store Connect and submit it. `eas.json` names the App Store Connect app by its Apple ID (`submit.production.ios.ascAppId`). Changes only to the website, admin site, Supabase or docs don't start a build, and Actions → TestFlight → Run workflow starts one by hand.
 
-1. On expo.dev → the project → Environment variables, set `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` and the Google client ids for the **production** environment, pointing at the production Supabase project.
-2. `eas build --platform ios --profile production` (the first run signs in to Apple and makes the certificate and provisioning profile).
-3. `eas submit --platform ios --latest` uploads it to App Store Connect for TestFlight and review.
+`eas.json` has three iOS profiles:
+
+| Profile | Supabase | What it's for |
+| --- | --- | --- |
+| `production` | production | TestFlight and the store. EAS keeps the build number and bumps it on every build; the marketing version is `version` in `app.json`. |
+| `preview` | dev | Trying unfinished work on your phone. It's "AirStrive Preview" (`app.airstrive.mobile.preview`, its own App Group and `airstrive-preview://` scheme), so it installs beside the TestFlight app without sharing its data. `eas build -p ios --profile preview`, installed from the link EAS gives you. |
+| `development` | dev | A dev client for `npx expo start`. |
+
+Each profile reads its environment variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, the Google client ids, `EXPO_PUBLIC_FLAGS`) from the matching environment on expo.dev. Sign in with Google needs an iOS client id for `app.airstrive.mobile.preview` before it works in the preview app; leave it out there and the preview app signs in with Apple only. Add `app.airstrive.mobile.preview` to the dev Supabase project's Apple client ids.
+
+Feature flags (`src/lib/flags.ts`) keep unfinished work on `main` hidden: wrap it in `flag('name')`, list the name in `EXPO_PUBLIC_FLAGS` for the preview environment to try it, and for production when it's ready.
+
+One-time setup:
+
+1. On expo.dev → the project → Environment variables, set `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` and the Google client ids for **production** (the production Supabase project) and for **preview** and **development** (the dev project).
+2. Run `eas build --platform ios --profile production --auto-submit` once on your computer. It signs in to Apple, makes the certificates and provisioning profiles for the app and the widget, and offers to make an App Store Connect API key for submitting. Say yes to each; EAS keeps them, so later builds need no sign-in.
+3. On expo.dev → Account settings → Access tokens, make a token, and add it to GitHub → Settings → Secrets and variables → Actions as `EXPO_TOKEN`.
+4. In App Store Connect → TestFlight, make an internal testing group with yourself in it and turn on automatic distribution, so each new build reaches your phone.
+5. For preview builds, register your iPhone once with `eas device:create`.
+
+To release, open App Store Connect → the app → the version, choose a TestFlight build, and submit it for review.
 
 The production Supabase project needs the same backend steps as above (`supabase db push`, `supabase functions deploy delete-account`, the Apple and Google providers). Its Apple client ids should be `app.airstrive.mobile` only: `host.exp.Exponent` is for Expo Go and doesn't belong in production.
 

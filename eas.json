@@ -14,6 +14,9 @@
       "distribution": "internal",
       "environment": "preview",
       "channel": "preview",
+      "env": {
+        "APP_VARIANT": "preview"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -25,6 +28,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6829024496"
+      }
+    }
   }
 }

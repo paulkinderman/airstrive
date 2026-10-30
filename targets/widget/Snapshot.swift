@@ -3,8 +3,13 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// The App Group the app writes to (src/widgets/publish.ios.ts) and the widgets read from.
-let appGroup = "group.app.airstrive.mobile"
+/// The App Group the app writes to (src/widgets/publish.ios.ts) and the widgets read from:
+/// "group." and the app's bundle id, which is this extension's without ".widget", so the
+/// preview build (app.airstrive.mobile.preview) gets its own.
+let appGroup: String = {
+  let id = Bundle.main.bundleIdentifier ?? "app.airstrive.mobile.widget"
+  return "group." + (id.hasSuffix(".widget") ? String(id.dropLast(".widget".count)) : id)
+}()
 
 /// What the app last saved for the widgets: your grids with their open squares, your newest
 /// moments, and what friends shared. Kept in step with WidgetSnapshot in src/widgets/snapshot.ts.
