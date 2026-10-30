@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { Moment } from '@/db/repo';
@@ -54,9 +54,9 @@ export function LatelyStack({ moments, onOpen }: { moments: Moment[]; onOpen: (m
         busy.current = true;
         const k = 520 / Math.max(dist, 1);
         Animated.timing(pan, { toValue: { x: g.dx * k, y: g.dy * k }, duration: 260, useNativeDriver: false }).start(() => {
+          // The flicked photo stays off-screen until the reordered stack renders (below);
+          // resetting the offset here would put it back on top for a frame.
           setOrder((o) => [...o.slice(1), o[0]]);
-          pan.setValue({ x: 0, y: 0 });
-          busy.current = false;
         });
       } else {
         Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
@@ -64,6 +64,12 @@ export function LatelyStack({ moments, onOpen }: { moments: Moment[]; onOpen: (m
     },
     onPanResponderTerminate: () => Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start(),
   }), [pan]);
+
+  // Once the new top photo is in place, bring the offset back, before the screen paints.
+  useLayoutEffect(() => {
+    pan.setValue({ x: 0, y: 0 });
+    busy.current = false;
+  }, [order, pan]);
 
   const spin = pan.x.interpolate({ inputRange: [-300, 300], outputRange: ['-25deg', '25deg'] });
   const drawn = order.slice(0, DRAWN).reverse();
