@@ -18,7 +18,7 @@ import { colors, fonts, radius } from '@/theme';
 import { Avatar } from '@/friends/bits';
 import { getGroupMoment, removeMyPart, saveGroupMoment, type EntryAudience, type GroupEntry, type GroupPhoto } from './repo';
 import { DetailChip as Chip } from '@/ui/DetailChip';
-import { SquareLookPicker } from '@/ui/SquareLook';
+import { SquareLookPicker, isColorFill } from '@/ui/SquareLook';
 
 const MAX_PHOTOS = 6;
 
@@ -67,7 +67,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
       setPlace(existing.place);
       setWeather(existing.weather);
       setWithPeople(existing.withPeople);
-      setFill(existing.fill);
+      setFill(isColorFill(existing.fill) ? '' : existing.fill);
       const myEntry = existing.entries.find((e) => e.mine);
       if (myEntry) { setBody(myEntry.body); setAudience(myEntry.audience); }
       const myPhotos = existing.photos.filter((p) => p.mine);
@@ -188,7 +188,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
         <View style={{ gap: 10 }}>
           <Text variant="label">Square fill</Text>
           <SquareLookPicker kind="fill" value={fill} onChange={setFill} color={meta.color} />
-          <Text variant="caption">How this square fills in on the grid when it has no photo. It's shared with the group.</Text>
+          <Text variant="caption">The grid's color, or the grid's color with an emoji. Shows on the grid when this moment has no photo, and it's shared with the group.</Text>
         </View>
 
         {(theirs.entries.length > 0 || theirs.photos.length > 0) && (

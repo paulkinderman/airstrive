@@ -15,7 +15,7 @@ import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { AudiencePicker } from '@/friends/AudiencePicker';
 import { DetailChip as Chip } from '@/ui/DetailChip';
-import { SquareLookPicker } from '@/ui/SquareLook';
+import { SquareLookPicker, isColorFill } from '@/ui/SquareLook';
 import { GroupMomentSheet } from '@/groups/GroupMomentSheet';
 import { groupOfSquare } from '@/groups/repo';
 import { narrower, type Audience } from '@/friends/audience';
@@ -81,7 +81,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
         setPlace(existing.place);
         setWeather(existing.weather);
         setWithPeople(existing.withPeople);
-        setFill(existing.fill);
+        setFill(isColorFill(existing.fill) ? '' : existing.fill);
         setPhotos(existing.photos.map((p) => ({ id: p.id, path: p.path, uri: p.uri, width: p.width, height: p.height, bytes: 0 })));
         const c = existing.photos.findIndex((p) => p.isCover);
         setCover(c < 0 ? 0 : c);
@@ -203,7 +203,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
         <View style={{ gap: 10 }}>
           <Text variant="label">Square fill</Text>
           <SquareLookPicker kind="fill" value={fill} onChange={setFill} color={meta.color} />
-          <Text variant="caption">How this square fills in on the grid when it has no photo. Tap + to use any emoji.</Text>
+          <Text variant="caption">The grid's color, or the grid's color with an emoji. Shows on the grid when this moment has no photo. Tap + to use any emoji.</Text>
         </View>
 
         <View style={{ gap: 10 }}>
