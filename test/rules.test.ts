@@ -50,11 +50,11 @@ for (const size of Object.keys(SIZES) as GridSize[]) {
     assert.equal(b.freebiesLeft, freebies);
     const open = b.squares.filter((s) => s.state === 'revealed').map((s) => s.idx).sort((p, q) => p - q);
     assert.deepEqual(open, startingSquares(size).sort((p, q) => p - q));
-    assert.equal(open.length, size === 'tiny' ? 2 : 4);
+    assert.equal(open.length, size === 'tiny' ? 5 : 4);
     // The open squares sit around the board's centre.
     for (const i of open) {
       const r = Math.floor(i / cols), c = i % cols;
-      assert.ok(Math.abs(r - (rows - 1) / 2) <= 1 && Math.abs(c - (cols - 1) / 2) <= 1, `${i} is central`);
+      assert.ok(Math.abs(r - (rows - 1) / 2) <= 1 && Math.abs(c - (cols - 1) / 2) <= (size === 'tiny' ? 1.5 : 1), `${i} is central`);
     }
   });
 

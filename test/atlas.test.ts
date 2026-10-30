@@ -4,7 +4,7 @@ import { TestDb, asExpo, BEFORE_GROUPS } from './sqlite';
 import { FakeServer, FakeDevice } from './fakeServer';
 import { migrate } from '@/db/schema';
 import { adoptGrid } from '@/data/seed';
-import { SIZES, neighbours, spiralOrder, startingSquares, type GridSize } from '@/data/types';
+import { SIZES, neighbours, placeClusters, spiralOrder, startingSquares, type GridSize } from '@/data/types';
 import { STARTERS } from '@/data/starters';
 import { createGrid, listShelf, loadBoard, removeFromShelf, setGridShared, saveMoment } from '@/db/repo';
 import { setMeta } from '@/db/queue';
@@ -66,7 +66,7 @@ test('atlas rows, search and the season strip', () => {
 
 test('starters are the squares revealed at the start, in board order', () => {
   const squares = Array.from({ length: 20 }, (_, idx) => ({ idx, prompt: `p${idx}` }));
-  assert.deepEqual(startersFrom('tiny', squares), ['p9', 'p10']);
+  assert.deepEqual(startersFrom('tiny', squares), ['p9', 'p10', 'p12', 'p13', 'p14']);
 });
 
 // ---------- laying out a made grid ----------
@@ -85,6 +85,13 @@ test('the spiral covers the board once and starts on the starting squares', () =
       assert.ok(neighbours(order[i - 1], cols, rows).includes(order[i]), `${size} step ${i}`);
     }
   }
+});
+
+test('official grids put their first cluster where the grid starts', () => {
+  const g = { id: 'grid_t', title: 'T', color: '', theme: '', size: 'tiny' as const, description: '',
+    clusters: [0, 1, 2, 3].map((k) => ({ name: `c${k}`, prompts: Array.from({ length: 5 }, (_, i) => `c${k} ${i}`) })) };
+  const start = startingSquares('tiny');
+  assert.deepEqual(placeClusters(g).filter((s) => start.includes(s.idx)).map((s) => s.cluster), ['c0', 'c0', 'c0', 'c0', 'c0']);
 });
 
 test('own squares are placed where the grid starts', () => {

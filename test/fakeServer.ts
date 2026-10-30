@@ -3,7 +3,7 @@
 import type { Remote, GridTemplate, LocalFiles, Unshare } from '../src/sync/engine';
 import type { SyncedTable } from '../src/db/queue';
 import { STARTERS } from '../src/data/starters';
-import { SIZES, placeClusters } from '../src/data/types';
+import { SIZES, bandOrder, placeClusters } from '../src/data/types';
 
 type Row = Record<string, unknown>;
 
@@ -149,7 +149,7 @@ export class FakeServer {
       fetchGrids: async (ids): Promise<GridTemplate[]> => [
         ...STARTERS.filter((g) => ids.includes(g.id)).map((g) => ({
           grid: { ...g, cols: SIZES[g.size].cols, rows: SIZES[g.size].rows, made_by: 'AirStrive', is_public: true, is_official: true, updated_at: '2026-01-01T00:00:00+00:00' },
-          squares: placeClusters(g).map((s) => ({ grid_id: g.id, ...s })),
+          squares: placeClusters(g, bandOrder(g.size)).map((s) => ({ grid_id: g.id, ...s })),
         })),
         ...ids.filter((id) => this.grids.has(id)).map((id) => this.grids.get(id)!),
       ],

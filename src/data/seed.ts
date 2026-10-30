@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { STARTERS } from './starters';
-import { SIZES, placeClusters, startingSquares } from './types';
+import { SIZES, bandOrder, placeClusters, startingSquares } from './types';
 import { markDirty } from '@/db/queue';
 import { newId, nowIso } from '@/lib/ids';
 import { starterSquareId, starterUserGridId } from '@/lib/uuid5';
@@ -18,7 +18,7 @@ export async function seedGridTemplates(db: SQLiteDatabase) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AirStrive', 1, 1, ?)`,
         g.id, g.title, g.color, g.theme, g.size, cols, rows, g.description, now,
       );
-      for (const sq of placeClusters(g)) {
+      for (const sq of placeClusters(g, bandOrder(g.size))) {
         await db.runAsync(
           'INSERT INTO grid_squares (grid_id, idx, prompt, hint, cluster) VALUES (?, ?, ?, ?, ?)',
           g.id, sq.idx, sq.prompt, '', sq.cluster,
