@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, ScrollView, Pressable, TextInput, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cancelRequest, requestFriend, respondRequest, searchUsernames, type Person } from '@/friends/api';
 import { BackIcon, Initial } from '@/friends/bits';
@@ -49,7 +50,7 @@ export default function AddFriend() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
+        <Pressable onPress={() => goBack(router, '/profile')} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
         <Text variant="label">Add a friend</Text>
         <View style={styles.iconButton} />
       </View>

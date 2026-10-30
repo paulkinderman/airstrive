@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Pressable, TextInput, Switch, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -142,7 +143,7 @@ export default function Make() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={styles.top}>
-        <Pressable onPress={() => router.back()} style={{ height: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+        <Pressable onPress={() => goBack(router)} style={{ height: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
           <Text variant="bodyBold" style={{ color: colors.muted }}>Cancel</Text>
         </Pressable>
         <Text variant="label">New grid</Text>

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -33,7 +34,7 @@ function ScrapbookPage({ momentId }: { momentId: string }) {
     useCallback(() => {
       (async () => {
         const [moment, all] = await Promise.all([getMoment(db, momentId), listPages(db)]);
-        if (!moment) { router.back(); return; }
+        if (!moment) { goBack(router, '/lane'); return; }
         setM(moment);
         const i = all.findIndex((x) => x.key === momentId); // newest first
         setNav({ page: all.length - i, prev: all[i + 1] ?? null, next: all[i - 1] ?? null });
@@ -50,7 +51,7 @@ function ScrapbookPage({ momentId }: { momentId: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.scrap }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton}>
+        <Pressable onPress={() => goBack(router, '/lane')} style={styles.headerButton}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.scrapInk} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           <Text variant="bodyBold" style={{ fontSize: 14, color: colors.scrapInk }}>Index</Text>
         </Pressable>

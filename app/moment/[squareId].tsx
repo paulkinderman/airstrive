@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -117,7 +118,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
     removeFiles(r.removedFiles);
     sync.request();
     if (r.completedGrid) router.replace({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: r.completedGrid } });
-    else router.back();
+    else goBack(router);
   };
 
   const remove = () => {
@@ -132,7 +133,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
           removeFiles([...r.removedFiles, ...fresh.current]);
           saved.current = true;
           sync.request();
-          router.back();
+          goBack(router);
         },
       },
     ]);
@@ -150,7 +151,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.paper }}>
       <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 16 : insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.headerButton}><Text variant="bodyBold" style={{ color: colors.muted }}>Cancel</Text></Pressable>
+        <Pressable onPress={() => goBack(router)} style={styles.headerButton}><Text variant="bodyBold" style={{ color: colors.muted }}>Cancel</Text></Pressable>
         <Text variant="label">{momentId ? 'Edit moment' : 'New moment'}</Text>
         <Pressable onPress={save} style={styles.headerButton}><Text variant="bodyBold" style={{ color: colors.accentDeep }}>Save</Text></Pressable>
       </View>

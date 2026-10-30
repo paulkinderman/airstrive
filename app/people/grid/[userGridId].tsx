@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { getSharedBoard, photoUrls, type SharedBoard } from '@/friends/api';
@@ -41,7 +42,7 @@ export default function SharedGrid() {
   if (!board) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + 8 }}>
-        <Pressable onPress={() => router.back()} style={[styles.iconButton, { marginLeft: 10 }]} accessibilityLabel="Back"><BackIcon /></Pressable>
+        <Pressable onPress={() => goBack(router, '/profile')} style={[styles.iconButton, { marginLeft: 10 }]} accessibilityLabel="Back"><BackIcon /></Pressable>
         <View style={{ padding: 24 }}>
           {loaded.loading ? <ActivityIndicator color={colors.muted} /> : (
             <Text variant="body" style={{ color: colors.muted }}>
@@ -63,7 +64,7 @@ export default function SharedGrid() {
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 320 }}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
+          <Pressable onPress={() => goBack(router, '/profile')} style={styles.iconButton} accessibilityLabel="Back"><BackIcon /></Pressable>
           <Text variant="label">{board.owner}'s grid</Text>
           <View style={styles.iconButton} />
         </View>

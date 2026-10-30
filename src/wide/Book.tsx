@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
@@ -55,7 +56,7 @@ export function Book({ startKey }: { startKey: string }) {
       if (document.querySelector('.as-alert-backdrop')) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); turn(1); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); turn(-1); }
-      else if (e.key === 'Escape') router.back();
+      else if (e.key === 'Escape') goBack(router, '/lane');
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -70,7 +71,7 @@ export function Book({ startKey }: { startKey: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.scrap }}>
       <View style={styles.top}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={() => goBack(router, '/lane')} style={styles.back}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.scrapInk} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           <Text variant="bodyBold" style={{ color: colors.scrapInk }}>Index</Text>
         </Pressable>

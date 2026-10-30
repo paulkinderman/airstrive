@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, useWindowDimensions, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -97,7 +98,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove', style: 'destructive',
-        onPress: async () => { await removeFromShelf(db, id); sync.request(); router.back(); },
+        onPress: async () => { await removeFromShelf(db, id); sync.request(); goBack(router); },
       },
     ]);
   };
@@ -127,7 +128,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: sq ? 260 : insets.bottom + 24 }}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back">
+          <Pressable onPress={() => goBack(router)} style={styles.iconButton} accessibilityLabel="Back">
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
           </Pressable>
           <Text variant="label">Grid</Text>

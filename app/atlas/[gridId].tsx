@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Pressable, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { goBack } from '@/lib/goBack';
 import { useSQLiteContext } from 'expo-sqlite';
 import Svg, { Path } from 'react-native-svg';
 import { ensureTemplate, findGrid } from '@/atlas/catalog';
@@ -75,7 +76,7 @@ export default function AtlasPreview() {
   return (
     <GridPreview
       grid={grid}
-      onBack={() => router.back()}
+      onBack={() => goBack(router, '/atlas')}
       headerAction={
         canReport ? (
           <Pressable
