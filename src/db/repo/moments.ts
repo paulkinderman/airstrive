@@ -198,6 +198,12 @@ export async function listMoments(db: SQLiteDatabase): Promise<Moment[]> {
   return hydrate(db, rows);
 }
 
+/** The newest moments logged, newest first, for the Lately stack on the wide home screen. */
+export async function listRecentMoments(db: SQLiteDatabase, limit = 100): Promise<Moment[]> {
+  const rows = await db.getAllAsync<MomentRow>(`${MOMENT_SELECT} ORDER BY m.created_at DESC LIMIT ?`, limit);
+  return hydrate(db, rows);
+}
+
 export async function getMoment(db: SQLiteDatabase, momentId: string): Promise<Moment | null> {
   const rows = await db.getAllAsync<MomentRow>(`${MOMENT_SELECT} AND m.id = ?`, momentId);
   const [m] = await hydrate(db, rows);

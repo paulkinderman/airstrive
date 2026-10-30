@@ -923,6 +923,21 @@ export type Database = {
       }
       cancel_request: { Args: { other: string }; Returns: undefined }
       claim_username: { Args: { name: string }; Returns: string }
+      friend_moments: {
+        Args: { lim?: number }
+        Returns: {
+          cover_path: string | null
+          created_at: string
+          fill: string
+          grid_color: string
+          grid_title: string
+          happened_on: string
+          moment_id: string
+          title: string
+          user_id: string
+          username: string | null
+        }[]
+      }
       invite_to_group: {
         Args: { friend: string; grp: string }
         Returns: string
