@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import type { ColorValue } from 'react-native';
+import { useWindowDimensions, type ColorValue } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { takePendingCode } from '@/friends/pendingCode';
+import { useWideLayout } from '@/ui/wide';
+import { Sidebar, SIDEBAR } from '@/wide/Sidebar';
 import { colors, fonts } from '@/theme';
 
 function GridsIcon({ color }: { color: ColorValue }) {
@@ -43,8 +45,17 @@ function ProfileIcon({ color }: { color: ColorValue }) {
   );
 }
 
+const ICONS = { index: GridsIcon, lane: LaneIcon, atlas: AtlasIcon };
+
+/** On a computer screen the tabs become a sidebar; tabs without a wide layout keep this width beside it. */
+const COLUMN = 640;
+
 export default function TabsLayout() {
   const router = useRouter();
+  const wide = useWideLayout();
+  const { width } = useWindowDimensions();
+  // The scene still covers the whole area beside the sidebar, so the tab behind it never shows through.
+  const column = wide ? { backgroundColor: colors.scrap, paddingHorizontal: Math.max(0, (width - SIDEBAR - COLUMN) / 2) } : undefined;
 
   // A friend link opened before signing in picks up here once the shelf is ready.
   useEffect(() => {
@@ -54,7 +65,9 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={wide ? (props) => <Sidebar {...props} icons={ICONS} /> : undefined}
       screenOptions={{
+        tabBarPosition: wide ? 'left' : 'bottom',
         headerShown: false,
         tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.muted,
@@ -64,9 +77,9 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Grids', tabBarIcon: GridsIcon }} />
-      <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon }} />
-      <Tabs.Screen name="atlas" options={{ title: 'Atlas', tabBarIcon: AtlasIcon }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon }} />
+      <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon, ...(column && { sceneStyle: column }) }} />
+      <Tabs.Screen name="atlas" options={{ title: 'Atlas', tabBarIcon: AtlasIcon, ...(column && { sceneStyle: column }) }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon, ...(column && { sceneStyle: column }) }} />
     </Tabs>
   );
 }

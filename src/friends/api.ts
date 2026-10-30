@@ -93,6 +93,21 @@ export async function listFriends(): Promise<Friend[]> {
   return (rows ?? []).map((r) => ({ id: String(r.id), username: String(r.username ?? 'someone'), since: String(r.since) }));
 }
 
+/** A moment a friend shared lately, for From friends on the wide home screen. */
+export interface FriendMoment {
+  id: string; userId: string; username: string; title: string; happenedOn: string;
+  fill: string; gridTitle: string; gridColor: string; coverPath: string | null;
+}
+
+export async function listFriendMoments(limit = 6): Promise<FriendMoment[]> {
+  const rows = await rpc<Row[]>('friend_moments', { lim: limit });
+  return (rows ?? []).map((r) => ({
+    id: String(r.moment_id), userId: String(r.user_id), username: String(r.username ?? 'someone'), title: String(r.title),
+    happenedOn: String(r.happened_on), fill: String(r.fill ?? ''), gridTitle: String(r.grid_title), gridColor: String(r.grid_color),
+    coverPath: (r.cover_path as string) ?? null,
+  }));
+}
+
 export async function listRequests(): Promise<FriendRequest[]> {
   const rows = await rpc<Row[]>('my_friend_requests');
   return (rows ?? []).map((r) => ({ id: String(r.id), username: String(r.username ?? 'someone'), createdAt: String(r.created_at) }));
