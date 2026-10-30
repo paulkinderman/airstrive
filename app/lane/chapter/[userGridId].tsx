@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { getChapter, listPages, type Chapter, type Page } from '@/db/repo';
 import { readBase64 } from '@/lib/files';
 import { chapterCaption, posterHtml } from '@/lib/printables';
@@ -13,7 +13,7 @@ import { printHtml, shareHtmlAsPdf } from '@/lib/share';
 import { useDataVersion } from '@/sync/events';
 import { PageLink, openPage } from '@/ui/PageLink';
 import { Text } from '@/ui/Text';
-import { Button } from '@/ui/Button';
+import { Menu } from '@/ui/Menu';
 import { colors } from '@/theme';
 
 async function dataUri(path: string | null) {
@@ -38,6 +38,10 @@ export default function ChapterCover() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Heights of the space under the header and of the words under the mosaic, so the mosaic can shrink to fit.
+  const [roomH, setRoomH] = useState(0);
+  const [wordsH, setWordsH] = useState(0);
   const version = useDataVersion();
   const [c, setC] = useState<Chapter | null>(null);
   const [nav, setNav] = useState<{ page: number; prev: Page | null; next: Page | null }>({ page: 0, prev: null, next: null });
@@ -57,7 +61,8 @@ export default function ChapterCover() {
 
   if (!c) return <View style={{ flex: 1, backgroundColor: colors.night }} />;
 
-  const frame = Math.min(width - 48, 420);
+  const fitH = roomH && wordsH ? roomH - wordsH - 20 - 20 - 22 : Infinity;
+  const frame = Math.max(Math.min(width - 48, 420, fitH), 160);
   const gap = c.cols >= 10 ? 3 : 4;
   const cell = (frame - 20 - gap * (c.cols - 1)) / c.cols;
 
@@ -88,14 +93,24 @@ export default function ChapterCover() {
           <Text variant="bodyBold" style={{ fontSize: 14, color: '#AEB5C0' }}>Index</Text>
         </Pressable>
         <Text variant="label" style={{ color: '#AEB5C0' }}>Chapter · Page {nav.page}</Text>
-        <Pressable onPress={share} style={[styles.headerButton, { width: 44, justifyContent: 'center' }]} accessibilityLabel="Share this page">
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#AEB5C0" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
-          </Svg>
-        </Pressable>
+        <View style={{ flexDirection: 'row' }}>
+          <Pressable onPress={share} style={[styles.headerButton, { width: 44, justifyContent: 'center' }]} accessibilityLabel="Share this page">
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#AEB5C0" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+            </Svg>
+          </Pressable>
+          <Pressable onPress={() => setMenuOpen(true)} style={[styles.headerButton, { width: 44, justifyContent: 'center' }]} accessibilityLabel="More">
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="#AEB5C0">
+              <Circle cx={5} cy={12} r={2} /><Circle cx={12} cy={12} r={2} /><Circle cx={19} cy={12} r={2} />
+            </Svg>
+          </Pressable>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 20, alignItems: 'center', gap: 22 }}>
+      <ScrollView
+        onLayout={(e) => setRoomH(e.nativeEvent.layout.height)}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 20, alignItems: 'center', gap: 22 }}
+      >
         <View style={[styles.frame, { width: frame, gap }]}>
           {c.tiles.map((uri, i) =>
             uri ? (
@@ -106,17 +121,10 @@ export default function ChapterCover() {
           )}
         </View>
 
-        <View style={{ alignItems: 'center', gap: 8 }}>
+        <View onLayout={(e) => setWordsH(e.nativeEvent.layout.height)} style={{ alignItems: 'center', gap: 8 }}>
           <Text variant="label" style={{ color: c.gridColor, letterSpacing: 2.5 }}>Grid complete</Text>
           <Text variant="display" style={{ fontSize: 40, lineHeight: 44, color: '#fff', textAlign: 'center' }}>{c.gridTitle}</Text>
           <Text variant="hand" style={{ fontSize: 24, color: '#D5DAE1', textAlign: 'center' }}>{chapterCaption(c.momentCount, c.firstOn, c.lastOn)}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'stretch' }}>
-          <Button label="Print as poster" color={c.gridColor} onPress={print} disabled={busy} style={{ flex: 1 }} />
-          <Pressable onPress={() => router.push({ pathname: '/grid/[id]', params: { id: userGridId } })} style={styles.secondary}>
-            <Text variant="bodyBold" style={{ color: '#fff' }}>Open the grid</Text>
-          </Pressable>
         </View>
       </ScrollView>
 
@@ -124,6 +132,16 @@ export default function ChapterCover() {
         <PageLink page={nav.prev} dir="prev" dark onPress={(p) => openPage(router, p)} />
         <PageLink page={nav.next} dir="next" dark onPress={(p) => openPage(router, p)} />
       </View>
+
+      <Menu
+        visible={menuOpen}
+        anchor={{ top: insets.top + 8 + 44, right: 12 }}
+        items={[
+          { label: 'Print as poster', onPress: () => void print() },
+          { label: 'Open the grid', onPress: () => router.push({ pathname: '/grid/[id]', params: { id: userGridId } }) },
+        ]}
+        onClose={() => setMenuOpen(false)}
+      />
     </View>
   );
 }
@@ -135,6 +153,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', padding: 10, backgroundColor: '#fff',
     shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 30, shadowOffset: { width: 0, height: 10 }, elevation: 10,
   },
-  secondary: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: '#4B5563', alignItems: 'center', justifyContent: 'center' },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
 });
