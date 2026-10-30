@@ -7,8 +7,8 @@ insert into auth.users (id) values
 
 do $$ begin
   assert (select count(*) from public.users) = 2, 'profile rows created by trigger';
-  assert (select count(*) from public.grids where is_official) = 31, 'six starter grids and the premade ones';
-  assert (select count(*) from public.grid_squares) = 1648, 'starter and premade prompts';
+  assert (select count(*) from public.grids where is_official) = 32, 'six starter grids and the premade ones';
+  assert (select count(*) from public.grid_squares) = 1668, 'starter and premade prompts';
 end $$;
 
 -- ----- as user one -----
@@ -76,7 +76,7 @@ do $$ begin
   assert (select count(*) from public.moments) = 0, 'cannot see another person''s moments';
   assert (select count(*) from public.user_grids) = 0, 'cannot see another person''s grids';
   assert (select count(*) from public.users) = 1, 'sees only own profile';
-  assert (select count(*) from public.grids) = 31, 'sees the public grids';
+  assert (select count(*) from public.grids) = 32, 'sees the public grids';
 end $$;
 
 do $$ begin
@@ -119,7 +119,7 @@ do $$ begin
   assert (select count(*) from public.square_states) = 0, 'squares gone';
   assert (select count(*) from public.moments) = 0, 'moments gone';
   assert (select count(*) from public.photos) = 0, 'photos gone';
-  assert (select count(*) from public.grids) = 31, 'shared templates stay';
+  assert (select count(*) from public.grids) = 32, 'shared templates stay';
 end $$;
 
 select 'all checks passed';

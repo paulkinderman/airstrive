@@ -459,6 +459,58 @@ export const gameNight: StarterGrid = {
   ],
 };
 
+export const workHolidayParty: StarterGrid = {
+  id: 'grid_work_holiday_party',
+  title: 'Work Holiday Party',
+  color: '#F0634A',
+  theme: 'People',
+  size: 'tiny',
+  description: 'Festive, friendly and office safe. One evening with the people you see all year.',
+  clusters: [
+    {
+      name: 'Arrive',
+      prompts: [
+        'Wear something festive but office safe',
+        'Arrive on time, or fashionably close',
+        'Meet someone from another team',
+        'Find the coworker you only know from email',
+        'Compliment someone on their outfit',
+      ],
+    },
+    {
+      name: 'Mingle',
+      prompts: [
+        'Learn what a coworker does outside work',
+        'Sit next to someone you rarely talk to',
+        'Ask a manager about their first job',
+        "Find out someone's favorite holiday tradition",
+        'Swap a favorite show recommendation',
+      ],
+    },
+    {
+      name: 'Fun',
+      prompts: [
+        'Enter the raffle and hope',
+        'Survive the white elephant gift swap',
+        'Get in a group photo with your team',
+        'Take a turn at karaoke, or cheer loudly',
+        'Try every dessert on the table',
+      ],
+    },
+    {
+      name: 'Wrap up',
+      prompts: [
+        'Thank someone who made your year easier',
+        'Toast a coworker who had a big year',
+        'Help clean up before you leave',
+        'Make sure everyone has a ride home',
+        'Send a thank you to the organizers',
+      ],
+    },
+  ],
+};
+
 export const TINY: StarterGrid[] = [
   thanksgiving, halloween, barCrawl, snowDay, morningReset, rainyDay, dateNight, sundayReset, gameNight,
+  workHolidayParty,
 ];
