@@ -59,12 +59,11 @@ export interface Moment {
   photos: MomentPhoto[];
 }
 
-export interface Suggestion {
+/** A revealed square waiting to be done. */
+export interface OpenSquare {
   squareStateId: string;
-  userGridId: string;
+  idx: number;
   prompt: string;
-  gridTitle: string;
-  gridColor: string;
 }
 
 /** Saving or removing a moment can finish a grid or leave photo files to clean up. */
