@@ -3,6 +3,7 @@ import type { Database, TablesInsert } from '@/db/database.types';
 import type { SquareState } from '@/db/repo';
 import type { ReportReason } from '@/atlas/catalog';
 import { asAudience, type Audience } from './audience';
+import { showable } from '@/lib/remoteImage';
 
 /**
  * Friends and other people's profiles. None of this is stored on the phone: it's read
@@ -173,7 +174,10 @@ export async function photoUrls(paths: string[]): Promise<Map<string, string>> {
   if (paths.length === 0) return out;
   const { data, error } = await client().storage.from('photos').createSignedUrls(paths, 3600);
   if (error) throw new Error(error.message);
-  for (const d of data ?? []) if (d.signedUrl && d.path) out.set(d.path, d.signedUrl);
+  await Promise.all((data ?? []).map(async (d) => {
+    const { path, signedUrl } = d;
+    if (signedUrl && path) out.set(path, await showable(signedUrl, path).catch(() => signedUrl));
+  }));
   return out;
 }
 
