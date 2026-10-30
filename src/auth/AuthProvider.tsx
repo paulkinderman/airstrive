@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { googleReturn, startGoogleSignIn } from './googleWeb';
 import { getMeta, setMeta } from '@/db/queue';
 import { removeAllPhotos } from '@/lib/files';
+import { clearWidgets } from '@/widgets/publish';
 import { forgetSignedIn, markSignedIn } from '@/auth/returning';
 import { normalizeUsername } from '@/lib/username';
 import { prepareForUser } from '@/sync/bootstrap';
@@ -222,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const forgetPhone = useCallback(async () => {
     await wipeLocal(db);
     removeAllPhotos();
+    clearWidgets();
     setUsername(null);
     setOffline(false);
     try { await googleMod?.GoogleSignin.signOut(); } catch { /* not signed in with Google */ }

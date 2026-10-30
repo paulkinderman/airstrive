@@ -17,6 +17,11 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.airstrive.mobile",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.airstrive.mobile"
+        ]
+      },
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "AirStrive uses your photos to keep the moments you log.",
         "NSCameraUsageDescription": "AirStrive uses the camera to capture a moment as it happens and to scan a friend's QR code."
@@ -140,7 +145,8 @@
           "cameraPermission": "AirStrive uses the camera to capture a moment as it happens and to scan a friend's QR code.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true
