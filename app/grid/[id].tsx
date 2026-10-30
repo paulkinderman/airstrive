@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, useWindowDimensions, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -42,15 +42,22 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
   const version = useDataVersion();
   const together = useTogetherLine(board?.groupId ?? null);
 
+  // A square is picked for you once, on an unfinished grid. A finished grid opens on the whole board,
+  // and a square you put down stays down.
+  const autoPicked = useRef(!!select);
+
   const reload = useCallback(async () => {
     const b = await loadBoard(db, id);
     setBoard(b);
-    if (b && !selected) {
-      const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
-      setSelected(first?.squareStateId ?? null);
+    if (b && !autoPicked.current) {
+      autoPicked.current = true;
+      if (!b.completedAt) {
+        const first = b.squares.find((s) => s.state === 'revealed') ?? b.squares[0];
+        setSelected(first?.squareStateId ?? null);
+      }
     }
     return b;
-  }, [db, id, selected, version]);
+  }, [db, id, version]);
 
   // Coming back to a group grid checks for what the others added.
   useFocusEffect(useCallback(() => { void reload().then((b) => { if (b?.groupId) sync.request(); }); }, [reload]));
@@ -118,7 +125,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 260 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: sq ? 260 : insets.bottom + 24 }}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Back">
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 5l-7 7 7 7" /></Svg>
@@ -158,7 +165,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
 
         <View style={{ paddingHorizontal: 20, paddingTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap }}>
           {board.squares.map((s) => (
-            <Tile key={s.squareStateId} square={s} size={cell} color={board.color} selected={s.squareStateId === selected} onPress={() => setSelected(s.squareStateId)} />
+            <Tile key={s.squareStateId} square={s} size={cell} color={board.color} selected={s.squareStateId === selected} onPress={() => setSelected((cur) => (cur === s.squareStateId ? null : s.squareStateId))} />
           ))}
         </View>
 
@@ -172,6 +179,9 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
       {sq && (
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.grabber} />
+          <Pressable onPress={() => setSelected(null)} style={styles.close} accessibilityLabel="Close" hitSlop={8}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.muted} strokeWidth={2.4} strokeLinecap="round"><Path d="M6 6l12 12M18 6L6 18" /></Svg>
+          </Pressable>
           {sq.state === 'hidden' && (
             <>
               <Text variant="label">Hidden square</Text>
@@ -264,4 +274,5 @@ const styles = StyleSheet.create({
     shadowColor: colors.ink, shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -6 }, elevation: 12,
   },
   grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 6 },
+  close: { position: 'absolute', top: 8, right: 8, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
 });
