@@ -61,6 +61,18 @@ The admin site has its own setup; see [admin/README.md](admin/README.md).
 
 In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.mobile`) and, if used, Google (web client id, with the iOS client id under authorized client ids).
 
+## Release to the App Store
+
+`eas.json` has a `production` profile: store distribution, build numbers kept by EAS and bumped on every build, and the `production` environment variables from expo.dev. The marketing version is `version` in `app.json`.
+
+1. On expo.dev → the project → Environment variables, set `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` and the Google client ids for the **production** environment, pointing at the production Supabase project.
+2. `eas build --platform ios --profile production` (the first run signs in to Apple and makes the certificate and provisioning profile).
+3. `eas submit --platform ios --latest` uploads it to App Store Connect for TestFlight and review.
+
+The production Supabase project needs the same backend steps as above (`supabase db push`, `supabase functions deploy delete-account`, the Apple and Google providers). Its Apple client ids should be `app.airstrive.mobile` only: `host.exp.Exponent` is for Expo Go and doesn't belong in production.
+
+`app.json` declares the privacy manifest (`ios.privacyManifests`), that the app uses no non-exempt encryption, and light and dark app icons. Settings links to the privacy policy and help pages on the website (`website/privacy.html`, `website/support.html`), which are also the URLs App Store Connect asks for.
+
 ## Website and web app
 
 The website is the landing page and privacy page in `website/`, plus the same app built for the browser at `/app`. On the web, photos live in IndexedDB and SQLite runs as WebAssembly, so it works offline like the phone app and syncs through the same Supabase account. On the web you sign in with Google or with a code sent by email. Sign in with Apple on the web needs a paid Apple Developer account.

@@ -4,11 +4,13 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
 import { buildExport } from '@/lib/exportData';
 import { shareZip } from '@/lib/share';
+import { privacyUrl, supportUrl } from '@/friends/links';
 import { listBlocked, listFriends, unblockUser } from '@/friends/api';
 import { useLoad } from '@/friends/useLoad';
 import { Text } from '@/ui/Text';
@@ -158,6 +160,11 @@ export default function Settings() {
             ))}
           </View>
         )}
+
+        <View style={[styles.card, { gap: 4 }]}>
+          <Button label="Help and contact" kind="quiet" onPress={() => Linking.openURL(supportUrl)} style={{ alignSelf: 'flex-start' }} />
+          <Button label="Privacy policy" kind="quiet" onPress={() => Linking.openURL(privacyUrl)} style={{ alignSelf: 'flex-start' }} />
+        </View>
 
         <View style={[styles.card, { gap: 4 }]}>
           <Button label="Sign out" kind="quiet" onPress={signOut} style={{ alignSelf: 'flex-start' }} />
