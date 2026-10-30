@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import type { Moment } from '@/db/repo';
@@ -27,49 +27,48 @@ function shortDate(day: string) {
 export function LatelyStack({ moments, onOpen }: { moments: Moment[]; onOpen: (momentId: string) => void }) {
   const [order, setOrder] = useState(moments);
   useEffect(() => setOrder(moments), [moments]);
-  const pan = useRef(new Animated.ValueXY()).current;
+  // Each top photo gets its own offset. A flick swaps in a fresh one in the same render as the
+  // new order, so the flicked photo is never drawn back on top and the next one starts in place.
+  const [pan, setPan] = useState(() => new Animated.ValueXY());
   const busy = useRef(false);
   const sideways = useRef(false);
-  // The responder is made once, so it reads the current stack and handler through refs.
-  const latest = useRef({ order, onOpen });
-  latest.current = { order, onOpen };
+  // The responder is made once, so it reads the current stack, offset and handler through refs.
+  const latest = useRef({ order, pan, onOpen });
+  latest.current = { order, pan, onOpen };
 
   // The stack owns the touch from the start, so a tap opens the top photo; it lets go to the
   // screen's scroll until the drag turns sideways, then keeps it for the flick.
-  const responder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => !busy.current,
-    onPanResponderGrant: () => { sideways.current = false; },
-    onPanResponderMove: (_, g) => {
-      if (!sideways.current && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy)) sideways.current = true;
-      pan.setValue({ x: g.dx, y: sideways.current ? g.dy : 0 });
-    },
-    onPanResponderTerminationRequest: () => !sideways.current,
-    onPanResponderRelease: (_, g) => {
-      const dist = Math.hypot(g.dx, g.dy);
-      if (dist < 8) {
-        pan.setValue({ x: 0, y: 0 });
-        const top = latest.current.order[0];
-        if (top) latest.current.onOpen(top.id);
-      } else if (sideways.current && latest.current.order.length > 1 && (Math.hypot(g.vx, g.vy) > 0.5 || dist > 110)) {
-        busy.current = true;
-        const k = 520 / Math.max(dist, 1);
-        Animated.timing(pan, { toValue: { x: g.dx * k, y: g.dy * k }, duration: 260, useNativeDriver: false }).start(() => {
-          // The flicked photo stays off-screen until the reordered stack renders (below);
-          // resetting the offset here would put it back on top for a frame.
-          setOrder((o) => [...o.slice(1), o[0]]);
-        });
-      } else {
-        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
-      }
-    },
-    onPanResponderTerminate: () => Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start(),
-  }), [pan]);
-
-  // Once the new top photo is in place, bring the offset back, before the screen paints.
-  useLayoutEffect(() => {
-    pan.setValue({ x: 0, y: 0 });
-    busy.current = false;
-  }, [order, pan]);
+  const responder = useMemo(() => {
+    const back = () => Animated.spring(latest.current.pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !busy.current,
+      onPanResponderGrant: () => { sideways.current = false; },
+      onPanResponderMove: (_, g) => {
+        if (!sideways.current && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy)) sideways.current = true;
+        latest.current.pan.setValue({ x: g.dx, y: sideways.current ? g.dy : 0 });
+      },
+      onPanResponderTerminationRequest: () => !sideways.current,
+      onPanResponderRelease: (_, g) => {
+        const dist = Math.hypot(g.dx, g.dy);
+        if (dist < 8) {
+          latest.current.pan.setValue({ x: 0, y: 0 });
+          const top = latest.current.order[0];
+          if (top) latest.current.onOpen(top.id);
+        } else if (sideways.current && latest.current.order.length > 1 && (Math.hypot(g.vx, g.vy) > 0.5 || dist > 110)) {
+          busy.current = true;
+          const k = 520 / Math.max(dist, 1);
+          Animated.timing(latest.current.pan, { toValue: { x: g.dx * k, y: g.dy * k }, duration: 260, useNativeDriver: false }).start(() => {
+            setOrder((o) => [...o.slice(1), o[0]]);
+            setPan(new Animated.ValueXY());
+            busy.current = false;
+          });
+        } else {
+          back();
+        }
+      },
+      onPanResponderTerminate: back,
+    });
+  }, []);
 
   const spin = pan.x.interpolate({ inputRange: [-300, 300], outputRange: ['-25deg', '25deg'] });
   const drawn = order.slice(0, DRAWN).reverse();
@@ -92,17 +91,21 @@ export function LatelyStack({ moments, onOpen }: { moments: Moment[]; onOpen: (m
           </View>
         );
         const tilt = [{ translateX: l.x }, { translateY: l.y }, { rotate: `${l.rotate}deg` }];
-        if (!isTop) return <View key={m.id} pointerEvents="none" style={[styles.slot, { transform: tilt }]}>{card}</View>;
+        // Every card is the same kind of view under a steady key, so moving to the top never
+        // remounts one (a remount reloads its photo, which shows as a blink).
         return (
           <Animated.View
             key={m.id}
-            accessible
+            pointerEvents={isTop ? 'auto' : 'none'}
+            accessible={isTop}
+            accessibilityElementsHidden={!isTop}
+            importantForAccessibility={isTop ? 'yes' : 'no-hide-descendants'}
             accessibilityRole="button"
             accessibilityLabel={`Open ${m.title || m.prompt}`}
             accessibilityHint="Swipe sideways to see the next photo"
             accessibilityActions={[{ name: 'activate' }]}
             onAccessibilityAction={() => onOpen(m.id)}
-            style={[styles.slot, { transform: [...pan.getTranslateTransform(), { rotate: spin }, ...tilt] }]}>
+            style={[styles.slot, { transform: isTop ? [...pan.getTranslateTransform(), { rotate: spin }, ...tilt] : tilt }]}>
             {card}
           </Animated.View>
         );
