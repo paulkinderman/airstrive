@@ -13,6 +13,7 @@ import { loadPhotos } from '@/lib/files';
 import '@/lib/webSetup';
 import { AuthProvider, useAuth, type AuthStatus } from '@/auth/AuthProvider';
 import { SyncProvider } from '@/sync/SyncProvider';
+import { useWidgets } from '@/widgets/useWidgets';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { BrandScreen } from '@/ui/Brand';
@@ -48,7 +49,8 @@ export default function RootLayout() {
 }
 
 function Routes() {
-  const { status, userId } = useAuth();
+  const { status, userId, configured } = useAuth();
+  useWidgets(status === 'ready', configured);
 
   useEffect(() => {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => {});

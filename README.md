@@ -73,6 +73,12 @@ The production Supabase project needs the same backend steps as above (`supabase
 
 `app.json` declares the privacy manifest (`ios.privacyManifests`), that the app uses no non-exempt encryption, and light and dark app icons. Settings links to the privacy policy and help pages on the website (`website/privacy.html`, `website/support.html`), which are also the URLs App Store Connect asks for.
 
+## Home screen widgets (iOS)
+
+Four widgets, written in SwiftUI in `targets/widget/` and added to the Xcode project by `@bacons/apple-targets` on prebuild: **Next up** (small and medium, a different open square each hour), **Lately** (small and medium, your newest photos as polaroids), **Your grids** (medium, four grids at a glance) and **Scrapbook** (large: Lately, Next up and what friends shared). Tapping one opens that square, moment or the shelf.
+
+The app writes `widget.json` and small JPEGs of recent photos to the App Group `group.app.airstrive.mobile` after every edit or sync pull and when it comes to the front (`src/widgets/`), and asks iOS to redraw. Widgets need a development or store build (`eas build`), not Expo Go. EAS makes the widget's App ID (`app.airstrive.mobile.widget`), the App Group and its provisioning profile on the first build. To build in Xcode instead, set `ios.appleTeamId` in `app.json` and run `npx expo prebuild -p ios --clean`.
+
 ## Website and web app
 
 The website is the landing page and privacy page in `website/`, plus the same app built for the browser at `/app`. On the web, photos live in IndexedDB and SQLite runs as WebAssembly, so it works offline like the phone app and syncs through the same Supabase account. On the web you sign in with Google or with a code sent by email. Sign in with Apple on the web needs a paid Apple Developer account.
@@ -145,7 +151,9 @@ src/
   auth/AuthProvider.tsx      Apple / Google / email sign-in, username, sign-out, deletion
   lib/exportData.ts          the export zip: moments.json, photos/, memory-lane.pdf
   lib/printables.ts          HTML for the poster and the scrapbook PDF
+  widgets/                   what the home screen widgets show, written for them to read
   lib/*.web.ts               browser versions: photos in IndexedDB, printing and downloads, dialogs
+targets/widget/              the iOS home screen widgets (SwiftUI), with the app's fonts
 website/                     landing page, privacy page and the /f/<code> friend link page (static HTML)
 supabase/
   migrations/                tables, row-level security, triggers, starter grid seed
