@@ -8,6 +8,7 @@ import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Brand } from '@/ui/Brand';
 import { hasSignedInBefore } from '@/auth/returning';
+import { flag } from '@/lib/flags';
 import { colors, fonts, radius } from '@/theme';
 
 export default function Welcome() {
@@ -126,7 +127,7 @@ export default function Welcome() {
                 <Text variant="bodyBold" style={{ fontSize: 16 }}>Continue with Google</Text>
               </Pressable>
             )}
-            {auth.configured && (
+            {auth.configured && (Platform.OS !== 'ios' || flag('emailSignIn')) && (
               <Pressable onPress={() => setEmailStep('address')} disabled={busy} style={({ pressed }) => [styles.google, pressed && { opacity: 0.85 }]}>
                 <MailMark />
                 <Text variant="bodyBold" style={{ fontSize: 16 }}>Continue with email</Text>
