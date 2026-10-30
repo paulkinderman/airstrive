@@ -1,0 +1,56 @@
+import type { StarterGrid } from '../types';
+
+/**
+ * Paul's grid for his family's Thanksgiving in Alpharetta. It is a private grid to share
+ * with the family, so it is not in PREMADE and does not go in the Atlas.
+ */
+export const kinderMemories: StarterGrid = {
+  id: 'grid_kinder_memories',
+  title: 'Kinder-memories',
+  color: '#C4612D',
+  theme: 'Family',
+  size: 'tiny',
+  description: 'Thanksgiving in Alpharetta, all of us together. Start before the trip and be ridiculous along the way.',
+  clusters: [
+    {
+      name: 'Getting there',
+      prompts: [
+        'Predict who arrives last, then gloat',
+        'Pack one ridiculous item for no reason',
+        'Send a selfie from the road or the gate',
+        'Make up a song about the trip',
+        'Arrive and hug everyone at the door',
+      ],
+    },
+    {
+      name: 'Thanksgiving Day',
+      prompts: [
+        'Show up to dinner in a turkey hat',
+        'Say what you are grateful for this year',
+        'Give a dramatic reading of the menu',
+        'Take a photo of the whole table',
+        'Have pie for breakfast the morning after Thanksgiving',
+      ],
+    },
+    {
+      name: 'All together',
+      prompts: [
+        'Stroll Avalon together after dark',
+        'Recreate an old family photo, pose for pose',
+        'Hold a family thumb war tournament',
+        'Take a group photo making turkey faces',
+        'Play a board game across the generations',
+      ],
+    },
+    {
+      name: 'Keep the memories',
+      prompts: [
+        'Write down the funniest quote of the trip',
+        'Record a grandparent telling a story',
+        'Do your best impression of another Kinderman',
+        'Hand out awards for the funniest moments',
+        'Start a new Kinderman tradition',
+      ],
+    },
+  ],
+};

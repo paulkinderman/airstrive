@@ -77,7 +77,7 @@ end $$;
 set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 
 do $$ begin
-  assert (select count(*) from public.atlas_grids()) = 8, 'six official and two shared';
+  assert (select count(*) from public.atlas_grids()) = 33, 'thirty-one official and two shared';
   assert not exists (select 1 from public.atlas_grids() where title = 'Secret'), 'private grid not listed';
   assert (select starters from public.atlas_grids() where id = 'grid_fall') =
     (select array_agg(prompt order by idx) from public.grid_squares where grid_id = 'grid_fall' and idx in (20, 21, 26, 27)),
@@ -138,7 +138,7 @@ end $$;
 -- ----- after moderation -----
 set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 do $$ begin
-  assert (select count(*) from public.atlas_grids()) = 6, 'hidden grids leave the Atlas';
+  assert (select count(*) from public.atlas_grids()) = 31, 'hidden grids leave the Atlas';
   assert (select count(*) from public.grids where id = 'a0000000-0000-4000-8000-000000000001') = 1, 'adopter keeps the grid';
   assert (select count(*) from public.grid_squares where grid_id = 'a0000000-0000-4000-8000-000000000001') = 20, 'and its squares';
 end $$;
