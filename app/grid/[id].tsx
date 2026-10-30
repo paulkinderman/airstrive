@@ -165,7 +165,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
 
         <View style={{ paddingHorizontal: 20, paddingTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap }}>
           {board.squares.map((s) => (
-            <Tile key={s.squareStateId} square={s} size={cell} color={board.color} selected={s.squareStateId === selected} onPress={() => setSelected((cur) => (cur === s.squareStateId ? null : s.squareStateId))} />
+            <Tile key={s.squareStateId} square={s} size={cell} color={board.color} revealIcon={board.revealIcon} selected={s.squareStateId === selected} onPress={() => setSelected((cur) => (cur === s.squareStateId ? null : s.squareStateId))} />
           ))}
         </View>
 

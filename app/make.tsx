@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
+import { SquareLookPicker } from '@/ui/SquareLook';
 import { colors, fonts, gridColors, radius } from '@/theme';
 
 const COLOR_NAMES = ['Yellow', 'Coral', 'Blue', 'Green', 'Violet', 'Rust', 'Indigo', 'Clay'];
@@ -35,6 +36,7 @@ export default function Make() {
 
   const [title, setTitle] = useState(params.title ?? '');
   const [color, setColor] = useState<string>(gridColors[4]);
+  const [revealIcon, setRevealIcon] = useState('');
   const [size, setSize] = useState<GridSize>('small');
   const [theme, setTheme] = useState<Theme>('Making');
   const [description, setDescription] = useState('');
@@ -55,6 +57,7 @@ export default function Make() {
       if (!t) return;
       setTitle(`${t.grid.title}, my way`);
       setColor(t.grid.color);
+      setRevealIcon(t.grid.reveal_icon ?? '');
       setSize(t.grid.size);
       if ((THEMES as readonly string[]).includes(t.grid.theme)) setTheme(t.grid.theme as Theme);
       setDescription(t.grid.description);
@@ -123,7 +126,7 @@ export default function Make() {
     setSaving(true);
     try {
       const ug = await createGrid(db, userId, {
-        title: title.trim().slice(0, 60), color, theme, size, description: description.trim().slice(0, 280), isPublic: shared,
+        title: title.trim().slice(0, 60), color, revealIcon, theme, size, description: description.trim().slice(0, 280), isPublic: shared,
         squares: layOut(size, ownClean, suggested),
       });
       sync.request();
@@ -172,6 +175,12 @@ export default function Make() {
               />
             ))}
           </View>
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text variant="label">Revealed squares show</Text>
+          <SquareLookPicker kind="reveal" value={revealIcon} onChange={setRevealIcon} color={color} />
+          <Text variant="caption">The mark on a square once it's revealed and waiting for you. Tap + to use any emoji.</Text>
         </View>
 
         <View style={{ gap: 10 }}>

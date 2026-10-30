@@ -13,6 +13,8 @@ export interface NewGrid {
   theme: string;
   size: GridSize;
   description: string;
+  /** The icon on revealed squares; left out or '' is the dot in the grid's color. */
+  revealIcon?: string;
   isPublic: boolean;
   squares: { idx: number; prompt: string; cluster: string }[];
 }
@@ -26,9 +28,9 @@ export async function createGrid(db: SQLiteDatabase, userId: string, made: NewGr
   const username = (await db.getFirstAsync<{ value: string }>("SELECT value FROM meta WHERE key = 'username'"))?.value ?? 'you';
   await db.withTransactionAsync(async () => {
     await db.runAsync(
-      `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, made_by, author_id, is_public, is_official, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      id, made.title.trim(), made.color, made.theme, made.size, cols, rows, made.description.trim(), username, userId,
+      `INSERT INTO grids (id, title, color, theme, size, cols, rows, description, reveal_icon, made_by, author_id, is_public, is_official, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      id, made.title.trim(), made.color, made.theme, made.size, cols, rows, made.description.trim(), made.revealIcon?.trim() ?? '', username, userId,
       made.isPublic ? 1 : 0, now,
     );
     for (const s of made.squares) {
@@ -128,7 +130,7 @@ export async function shelfCopyOf(db: SQLiteDatabase, gridId: string): Promise<s
 
 export interface GridTemplateRow {
   id: string; title: string; color: string; theme: string; size: GridSize; cols: number; rows: number;
-  description: string; made_by: string; author_id: string | null; is_official: number; is_public: number;
+  description: string; reveal_icon: string; made_by: string; author_id: string | null; is_official: number; is_public: number;
 }
 
 export async function getTemplate(db: SQLiteDatabase, gridId: string) {

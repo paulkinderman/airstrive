@@ -219,7 +219,7 @@ export function WideGrid({ id, select }: { id: string; select?: string }) {
           <View style={{ width: boardW, flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
             {board.squares.map((s) => (
               <Tile
-                key={s.squareStateId} square={s} size={cell} color={board.color}
+                key={s.squareStateId} square={s} size={cell} color={board.color} revealIcon={board.revealIcon}
                 selected={s.squareStateId === selected}
                 onPress={() => { setSelected((cur) => (cur === s.squareStateId ? null : s.squareStateId)); setHovered(null); }}
                 onHover={(on) => setHovered((h) => (on ? s.squareStateId : h === s.squareStateId ? null : h))}

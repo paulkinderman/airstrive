@@ -40,6 +40,8 @@ export const TABLES: Record<SyncedTable, Column[]> = {
   moments: on('moments', [
     text('id'), text('square_state_id'), text('title'), text('body'), text('happened_on'), text('place'), text('weather'),
     text('with_people'), text('audience', 'private'),
+    // A server from before square looks has no fill; the square takes the grid's color.
+    text('fill', ''),
     ts('created_at'), ts('updated_at'), ts('deleted_at'), fromServer('group_id'), fromServer('user_id'),
   ]),
   // Group moments only: one person's words, seen by the group or by them alone.
@@ -56,7 +58,8 @@ export const TABLES: Record<SyncedTable, Column[]> = {
 
 /** What save_grid() takes for a grid the person made. Squares go separately. */
 export const GRID_PUSH: Column[] = on('grids', [
-  text('id'), text('title'), text('color'), text('theme'), text('size'), text('description'), bool('is_public'), ts('updated_at'),
+  text('id'), text('title'), text('color'), text('theme'), text('size'), text('description'), text('reveal_icon'), bool('is_public'),
+  ts('updated_at'),
 ]);
 
 export const columnNames = (table: SyncedTable) => TABLES[table].map((c) => c.name);

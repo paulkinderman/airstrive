@@ -66,6 +66,24 @@ test('a v0 phone upgrades without losing moments or photos', async () => {
   assert.equal(shelf.filter((g) => g.title === 'Running').length, 1);
 });
 
+test("a moment's fill shows on its square and reaches the other phone", async () => {
+  const server = new FakeServer();
+  const a = await phone(server);
+  await signIn(a);
+  const { ug, sq } = await revealedSquare(a.x, 'Fall');
+  await saveMoment(a.x, sq.squareStateId, { ...moment('Leaves'), fill: '🍂' });
+  assert.equal((await loadBoard(a.x, ug))!.squares.find((s) => s.idx === sq.idx)!.fill, '🍂');
+  // An edit that leaves the fill out keeps it.
+  await saveMoment(a.x, sq.squareStateId, moment('More leaves'));
+  assert.equal((await loadBoard(a.x, ug))!.squares.find((s) => s.idx === sq.idx)!.fill, '🍂');
+  await a.sync();
+
+  const b = await phone(server);
+  await signIn(b);
+  assert.equal((await loadBoard(b.x, ug))!.squares.find((s) => s.idx === sq.idx)!.fill, '🍂');
+  assert.equal((await listMoments(b.x))[0].fill, '🍂');
+});
+
 test('two phones end up with the same shelf, moments and photos', async () => {
   const server = new FakeServer();
   const a = await phone(server);

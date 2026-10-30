@@ -10,15 +10,16 @@ export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
   const header = await db.getFirstAsync<{
     title: string; color: string; cols: number; rows: number; freebies_left: number; completed_at: string | null; description: string;
     grid_id: string; author_id: string | null; is_public: number; is_official: number; audience: string; group_id: string | null;
-  }>(`SELECT g.title, g.color, g.cols, g.rows, g.description, ug.freebies_left, ug.completed_at,
+    reveal_icon: string;
+  }>(`SELECT g.title, g.color, g.reveal_icon, g.cols, g.rows, g.description, ug.freebies_left, ug.completed_at,
              g.id AS grid_id, g.author_id, g.is_public, g.is_official, ug.audience, ug.group_id
       FROM user_grids ug JOIN grids g ON g.id = ug.grid_id WHERE ug.id = ? AND ug.deleted_at IS NULL`, userGridId);
   if (!header) return null;
 
   const rows = await db.getAllAsync<{
     id: string; idx: number; state: SquareState; via_freebie: number;
-    prompt: string; hint: string; cluster: string; moment_id: string | null;
-  }>(`SELECT ss.id, ss.idx, ss.state, ss.via_freebie, gs.prompt, gs.hint, gs.cluster, m.id AS moment_id
+    prompt: string; hint: string; cluster: string; moment_id: string | null; fill: string | null;
+  }>(`SELECT ss.id, ss.idx, ss.state, ss.via_freebie, gs.prompt, gs.hint, gs.cluster, m.id AS moment_id, m.fill
       FROM square_states ss
       JOIN user_grids ug ON ug.id = ss.user_grid_id
       JOIN grid_squares gs ON gs.grid_id = ug.grid_id AND gs.idx = ss.idx
@@ -51,6 +52,7 @@ export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
       cluster: r.cluster,
       viaFreebie: r.via_freebie === 1,
       momentId: r.moment_id,
+      fill: r.fill ?? '',
       coverUri: uris[0] ?? null,
       photoUris: uris,
     };
@@ -66,6 +68,7 @@ export async function loadBoard(db: SQLiteDatabase, userGridId: string) {
     groupId: header.group_id,
     title: header.title,
     color: header.color,
+    revealIcon: header.reveal_icon,
     cols: header.cols,
     rows: header.rows,
     description: header.description,

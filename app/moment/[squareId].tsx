@@ -14,6 +14,7 @@ import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { AudiencePicker } from '@/friends/AudiencePicker';
 import { DetailChip as Chip } from '@/ui/DetailChip';
+import { SquareLookPicker } from '@/ui/SquareLook';
 import { GroupMomentSheet } from '@/groups/GroupMomentSheet';
 import { groupOfSquare } from '@/groups/repo';
 import { narrower, type Audience } from '@/friends/audience';
@@ -46,6 +47,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
   const [place, setPlace] = useState('');
   const [weather, setWeather] = useState('');
   const [withPeople, setWithPeople] = useState('');
+  const [fill, setFill] = useState('');
   const [photos, setPhotos] = useState<SheetPhoto[]>([]);
   const [cover, setCover] = useState(0);
   // null until loaded: a new moment starts with its grid's audience.
@@ -78,6 +80,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
         setPlace(existing.place);
         setWeather(existing.weather);
         setWithPeople(existing.withPeople);
+        setFill(existing.fill);
         setPhotos(existing.photos.map((p) => ({ id: p.id, path: p.path, uri: p.uri, width: p.width, height: p.height, bytes: 0 })));
         const c = existing.photos.findIndex((p) => p.isCover);
         setCover(c < 0 ? 0 : c);
@@ -107,7 +110,7 @@ function MomentSheet({ squareId }: { squareId: string }) {
     setSaving(true);
     const r = await saveMoment(db, squareId, {
       title: meta.prompt, body: body.trim(), happenedOn, place: place.trim(), weather: weather.trim(),
-      withPeople: withPeople.trim(), photos, coverIndex: Math.min(cover, Math.max(0, photos.length - 1)),
+      withPeople: withPeople.trim(), fill, photos, coverIndex: Math.min(cover, Math.max(0, photos.length - 1)),
       audience: narrower(audience ?? meta.audience, meta.audience),
     });
     saved.current = true;
@@ -194,6 +197,12 @@ function MomentSheet({ squareId }: { squareId: string }) {
             )}
           </View>
           <Text variant="caption">The cover photo becomes this square on your grid. Press and hold a photo to make it the cover.</Text>
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text variant="label">Square fill</Text>
+          <SquareLookPicker kind="fill" value={fill} onChange={setFill} color={meta.color} />
+          <Text variant="caption">How this square fills in on the grid when it has no photo. Tap + to use any emoji.</Text>
         </View>
 
         <View style={{ gap: 10 }}>
