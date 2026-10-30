@@ -1,6 +1,7 @@
 import { View, type TextStyle } from 'react-native';
 import type { Moment } from '@/db/repo';
 import { Text } from '@/ui/Text';
+import { Avatar } from '@/friends/bits';
 import { colors } from '@/theme';
 
 /** A moment's words: on a group grid, everyone's entry under their name. */
@@ -11,7 +12,10 @@ export function MomentWords({ moment, style, size }: { moment: Moment; style?: T
       <>
         {moment.entries.map((e, i) => (
           <View key={i} style={{ gap: 2 }}>
-            <Text variant="label" style={{ fontSize: 11, letterSpacing: 1.2, color: colors.scrapInk }}>{e.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Avatar userId={e.userId} name={e.name} size={20} />
+              <Text variant="label" style={{ fontSize: 11, letterSpacing: 1.2, color: colors.scrapInk }}>{e.name}</Text>
+            </View>
             <Text variant="hand" style={hand}>{e.body}</Text>
           </View>
         ))}

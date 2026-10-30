@@ -8,7 +8,7 @@ import { listGroupPeople, type GroupPerson } from '@/groups/repo';
 import { cancelGroupInvite, inviteToGroup, leaveGroup } from '@/groups/api';
 import { listFriends, type Friend } from '@/friends/api';
 import { useLoad } from '@/friends/useLoad';
-import { BackIcon, Initial } from '@/friends/bits';
+import { Avatar, BackIcon } from '@/friends/bits';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync, localFiles } from '@/sync/SyncProvider';
 import { useDataVersion } from '@/sync/events';
@@ -131,7 +131,7 @@ export default function TogetherScreen() {
         <Section title="In this grid">
           {members.map((p) => (
             <View key={p.id} style={styles.row}>
-              <Initial name={p.username} />
+              <Avatar userId={p.id} name={p.username} />
               <Text variant="bodyBold" style={{ flex: 1 }}>{p.id === userId ? `${p.username} (you)` : p.username}</Text>
             </View>
           ))}
@@ -142,7 +142,7 @@ export default function TogetherScreen() {
           <Section title="Invited">
             {invited.map((p) => (
               <View key={p.id} style={styles.row}>
-                <Initial name={p.username} />
+                <Avatar userId={p.id} name={p.username} />
                 <Text variant="bodyBold" style={{ flex: 1 }}>{p.username}</Text>
                 <Button label="Cancel" kind="quiet" onPress={() => onCancel(p)} disabled={busy === p.id} />
               </View>
@@ -162,7 +162,7 @@ export default function TogetherScreen() {
           )}
           {toInvite.map((f) => (
             <View key={f.id} style={styles.row}>
-              <Initial name={f.username} />
+              <Avatar userId={f.id} name={f.username} />
               <Text variant="bodyBold" style={{ flex: 1 }}>{f.username}</Text>
               <Button label={busy === f.id ? 'Inviting…' : 'Invite'} onPress={() => onInvite(f)} disabled={busy === f.id} style={styles.smallButton} />
             </View>

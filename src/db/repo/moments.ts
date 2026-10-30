@@ -174,7 +174,7 @@ async function hydrate(db: SQLiteDatabase, rows: MomentRow[]): Promise<Moment[]>
       withPeople: r.with_people,
       groupId: r.group_id,
       entries: entries.map((e) => ({
-        name: e.user_id && e.user_id === me ? 'You' : e.username ?? 'A former member', body: e.body, mine: !!me && e.user_id === me,
+        userId: e.user_id, name: e.user_id && e.user_id === me ? 'You' : e.username ?? 'A former member', body: e.body, mine: !!me && e.user_id === me,
       })),
       audience: narrower(asAudience(r.audience), asAudience(r.grid_audience)),
       gridAudience: asAudience(r.grid_audience),

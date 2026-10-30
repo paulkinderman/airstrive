@@ -92,4 +92,5 @@ export type PersonRow = {
   created_at: string;
   sharing_suspended: boolean;
   is_admin: boolean;
+  avatar_path: string | null;
 };

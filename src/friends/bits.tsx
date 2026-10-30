@@ -1,7 +1,9 @@
 import { View } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '@/ui/Text';
 import { colors } from '@/theme';
+import { useAvatar } from './avatars';
 
 /** A person's first letter in a rounded square, in place of a photo. */
 export function Initial({ name, size = 36 }: { name: string; size?: number }) {
@@ -9,6 +11,21 @@ export function Initial({ name, size = 36 }: { name: string; size?: number }) {
     <View style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
       <Text variant="bodyBold" style={{ color: '#fff', fontSize: size * 0.45, lineHeight: size * 0.6 }}>{name.slice(0, 1).toUpperCase()}</Text>
     </View>
+  );
+}
+
+/** Someone's profile picture when they have one you may see, and their initial otherwise. */
+export function Avatar({ userId, name, size = 36 }: { userId: string | null | undefined; name: string; size?: number }) {
+  const source = useAvatar(userId);
+  if (!source) return <Initial name={name} size={size} />;
+  return (
+    <Image
+      source={source}
+      cachePolicy="disk"
+      transition={150}
+      accessibilityIgnoresInvertColors
+      style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: colors.line }}
+    />
   );
 }
 

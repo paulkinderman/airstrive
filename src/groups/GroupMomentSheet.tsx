@@ -14,6 +14,7 @@ import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors, fonts, radius } from '@/theme';
+import { Avatar } from '@/friends/bits';
 import { getGroupMoment, removeMyPart, saveGroupMoment, type EntryAudience, type GroupEntry, type GroupPhoto } from './repo';
 import { DetailChip as Chip } from '@/ui/DetailChip';
 
@@ -195,7 +196,10 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
             )}
             {theirs.entries.map((e) => (
               <View key={e.id} style={styles.theirEntry}>
-                <Text variant="label" style={{ fontSize: 11 }}>{e.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Avatar userId={e.userId} name={e.name} size={20} />
+                  <Text variant="label" style={{ fontSize: 11 }}>{e.name}</Text>
+                </View>
                 <Text variant="body">{e.body}</Text>
               </View>
             ))}

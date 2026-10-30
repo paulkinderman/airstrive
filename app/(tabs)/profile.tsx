@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ScrollView, View, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, View, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,10 @@ import { useDataVersion } from '@/sync/events';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { MiniGrid } from '@/ui/MiniGrid';
-import { Chevron, Initial } from '@/friends/bits';
+import { Avatar, Chevron, Initial } from '@/friends/bits';
+import { removeMyAvatar, setMyAvatar, useAvatar } from '@/friends/avatars';
+import { pickAvatar } from '@/lib/avatarImage';
+import { Menu, type MenuItem } from '@/ui/Menu';
 import { colors, fonts, radius } from '@/theme';
 
 type SharedGrids = Awaited<ReturnType<typeof listSharedGrids>>;
@@ -32,6 +35,8 @@ export default function ProfileTab() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [pictureMenu, setPictureMenu] = useState(false);
+  const myPicture = useAvatar(auth.userId);
 
   useFocusEffect(useCallback(() => { listSharedGrids(db).then(setShared); }, [db, version]));
 
@@ -76,6 +81,34 @@ export default function ProfileTab() {
     setBusy(null);
   };
 
+  const changePicture = async (from: 'library' | 'camera') => {
+    if (!auth.userId) return;
+    try {
+      const image = await pickAvatar(from);
+      if (!image) return;
+      setBusy('picture');
+      await setMyAvatar(db, auth.userId, image);
+    } catch {
+      Alert.alert("Couldn't save your picture", 'Check your connection and try again.');
+    }
+    setBusy(null);
+  };
+
+  const removePicture = async () => {
+    if (!auth.userId) return;
+    setBusy('picture');
+    try { await removeMyAvatar(db, auth.userId); } catch {
+      Alert.alert("Couldn't remove your picture", 'Check your connection and try again.');
+    }
+    setBusy(null);
+  };
+
+  const pictureItems: MenuItem[] = [
+    { label: 'Choose a photo', onPress: () => void changePicture('library') },
+    ...(Platform.OS === 'web' ? [] : [{ label: 'Take a photo', onPress: () => void changePicture('camera') }]),
+    ...(myPicture ? [{ label: 'Remove picture', destructive: true, onPress: () => void removePicture() }] : []),
+  ];
+
   const friends = people.data?.friends ?? [];
   const requests = people.data?.requests ?? [];
   const invites = people.data?.invites ?? [];
@@ -95,7 +128,24 @@ export default function ProfileTab() {
 
       <View style={[styles.card, { marginHorizontal: 20 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View style={styles.avatar}><Text variant="display" style={{ fontSize: 26, lineHeight: 30, color: '#fff' }}>{(auth.username ?? '?').slice(0, 1).toUpperCase()}</Text></View>
+          {auth.configured && auth.userId ? (
+            <Pressable
+              onPress={() => setPictureMenu(true)}
+              disabled={busy === 'picture'}
+              accessibilityLabel={myPicture ? 'Change your profile picture' : 'Add a profile picture'}
+            >
+              <Avatar userId={auth.userId} name={auth.username ?? '?'} size={56} />
+              <View style={styles.pictureBadge}>
+                {busy === 'picture' ? <ActivityIndicator size="small" color={colors.ink} /> : (
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M4 8h3l2-3h6l2 3h3v11H4z" /><Circle cx={12} cy={13} r={3.5} />
+                  </Svg>
+                )}
+              </View>
+            </Pressable>
+          ) : (
+            <View style={styles.avatar}><Text variant="display" style={{ fontSize: 26, lineHeight: 30, color: '#fff' }}>{(auth.username ?? '?').slice(0, 1).toUpperCase()}</Text></View>
+          )}
           <Text variant="title" style={{ fontSize: 24, flex: 1 }}>{auth.username}</Text>
         </View>
         {editing ? (
@@ -173,7 +223,7 @@ export default function ProfileTab() {
             )}
             {friends.map((f) => (
               <Pressable key={f.id} onPress={() => router.push({ pathname: '/people/[userId]', params: { userId: f.id } })} style={styles.row}>
-                <Initial name={f.username} />
+                <Avatar userId={f.id} name={f.username} />
                 <Text variant="bodyBold" style={{ flex: 1 }}>{f.username}</Text>
                 <Chevron />
               </Pressable>
@@ -199,6 +249,13 @@ export default function ProfileTab() {
           </Pressable>
         ))}
       </Section>
+      <Menu
+        visible={pictureMenu}
+        title="Profile picture"
+        note="Your friends and the people you do grids with see it."
+        items={pictureItems}
+        onClose={() => setPictureMenu(false)}
+      />
     </ScrollView>
   );
 }
@@ -217,6 +274,7 @@ const styles = StyleSheet.create({
   roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.paper },
   card: { padding: 16, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, gap: 12 },
+  pictureBadge: { position: 'absolute', right: -4, bottom: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   bioInput: { minHeight: 70, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.lineStrong, padding: 12, fontFamily: fonts.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },
   list: { borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
