@@ -1,0 +1,70 @@
+name: TestFlight
+
+# Every merge to main that touches the app starts an EAS iOS production build, and EAS uploads
+# it to App Store Connect, where it reaches TestFlight's internal testers. The build runs on
+# EAS's servers, so this job only checks the code and hands it off (--no-wait). Sending a
+# build to App Store review stays a manual step in App Store Connect.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'website/**'
+      - 'admin/**'
+      - 'alexa/**'
+      - 'supabase/**'
+      - 'e2e/**'
+      - '**/*.md'
+      - '.github/workflows/backup-db.yml'
+      - '.github/workflows/deploy-migrations.yml'
+      - '.github/workflows/supabase-keepalive.yml'
+  workflow_dispatch:
+
+concurrency: testflight
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      # Until EXPO_TOKEN is set, skip with a warning instead of failing every merge to main.
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::warning::No TestFlight build. Add the EXPO_TOKEN repository secret (see README, Release to the App Store)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.config.outputs.ready == 'true'
+        uses: actions/checkout@v5
+      - if: steps.config.outputs.ready == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.config.outputs.ready == 'true'
+        run: npm ci
+      # The same checks as CI, so a broken main doesn't spend a build.
+      - if: steps.config.outputs.ready == 'true'
+        run: npm run typecheck && npm test
+      - if: steps.config.outputs.ready == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      # Without the app's Apple ID in eas.json (submit.production.ios.ascAppId) EAS can't
+      # submit without asking, so build only and say so.
+      - if: steps.config.outputs.ready == 'true'
+        name: Build and submit
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          submit=--auto-submit
+          if ! node -e "process.exit(require('./eas.json').submit?.production?.ios?.ascAppId ? 0 : 1)"; then
+            echo "::warning::Building without submitting: set submit.production.ios.ascAppId in eas.json."
+            submit=
+          fi
+          eas build --platform ios --profile production --non-interactive --no-wait $submit \
+            --message "$(printf '%s' "${COMMIT_MESSAGE:-Manual run}" | head -n1 | cut -c1-200)"

@@ -2,12 +2,13 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { Directory, File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { ExtensionStorage } from '@bacons/apple-targets';
+import Constants from 'expo-constants';
 import { listOpenSquares, listRecentMoments, listShelf } from '@/db/repo';
 import { listFriendMoments } from '@/friends/api';
 import { buildSnapshot, thumbName, type FriendLine } from './snapshot';
 
-/** The App Group in app.json, shared with the widget extension (targets/widget). */
-const GROUP = 'group.app.airstrive.mobile';
+/** The App Group in app.config.ts, shared with the widget extension (targets/widget). */
+const GROUP = `group.${Constants.expoConfig?.ios?.bundleIdentifier ?? 'app.airstrive.mobile'}`;
 /** Thumbnails are this wide: enough for a large widget's polaroid, small enough for its memory. */
 const THUMB = 360;
 
