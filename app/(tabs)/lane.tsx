@@ -59,7 +59,7 @@ export default function LaneIndex() {
     if (p.kind === 'moment') router.push({ pathname: '/lane/[momentId]', params: { momentId: p.moment.id } });
     else router.push({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: p.chapter.userGridId } });
   };
-  const firstMoment = [...pages].reverse().find((p) => p.kind === 'moment');
+  const openBook = () => router.push({ pathname: '/lane/[momentId]', params: { momentId: 'cover' } });
 
   const wall = (
     <View style={{ gap: 8 }}>
@@ -81,11 +81,19 @@ export default function LaneIndex() {
     </View>
   );
 
-  const header = (
+  // On a phone there's no rail, so the way into the book sits beside the page count.
+  const header = (withBook: boolean) => (
     <View style={{ gap: 2 }}>
       <Text variant="label" style={{ color: colors.scrapInk }}>Memory Lane</Text>
       <Text variant="display">Your scrapbook</Text>
-      <Text variant="body" style={{ fontSize: 14, color: colors.scrapInk, paddingTop: 4 }}>{summary}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
+        <Text variant="body" style={{ fontSize: 14, color: colors.scrapInk, flexShrink: 1 }}>{summary}</Text>
+        {withBook && pages.length > 0 && (
+          <Pressable onPress={openBook} style={styles.bookButton} accessibilityRole="link">
+            <Text variant="bodyBold" style={{ fontSize: 13 }}>Open the book</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 
@@ -93,7 +101,7 @@ export default function LaneIndex() {
     return (
       <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.scrap }}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: 18 }}>
-          {header}
+          {header(false)}
           {wall}
         </ScrollView>
         <ScrollView style={styles.rail} contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 24, gap: 12 }}>
@@ -111,12 +119,12 @@ export default function LaneIndex() {
               </View>
             </>
           )}
-          {firstMoment && (
+          {pages.length > 0 && (
             <>
               <Text variant="label" style={{ color: colors.scrapInk, paddingTop: 12 }}>The book</Text>
               <View style={[styles.railBox, { padding: 14, gap: 10 }]}>
                 <Text variant="body" style={{ fontSize: 14, color: colors.muted }}>Read it front to back, two pages at a time.</Text>
-                <Pressable onPress={() => open(firstMoment)} style={styles.bookButton} accessibilityRole="link">
+                <Pressable onPress={openBook} style={styles.bookButton} accessibilityRole="link">
                   <Text variant="bodyBold" style={{ fontSize: 13 }}>Open the book</Text>
                 </Pressable>
               </View>
@@ -129,7 +137,7 @@ export default function LaneIndex() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.scrap }} contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 40 }}>
-      <View style={{ paddingHorizontal: 24 }}>{header}</View>
+      <View style={{ paddingHorizontal: 24 }}>{header(true)}</View>
 
       {grids.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingTop: 16 }}>
@@ -160,5 +168,5 @@ const styles = StyleSheet.create({
   rail: { width: RAIL, flexGrow: 0, backgroundColor: colors.paper, borderLeftWidth: 1, borderLeftColor: colors.scrapLine },
   railBox: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.scrapLine, padding: 6 },
   railRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, height: 38, borderRadius: 10 },
-  bookButton: { alignSelf: 'flex-start', height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1.5, borderColor: colors.scrapLine, justifyContent: 'center' },
+  bookButton: { alignSelf: 'flex-start', height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1.5, borderColor: colors.scrapLine, backgroundColor: colors.card, justifyContent: 'center' },
 });

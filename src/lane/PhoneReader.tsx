@@ -10,12 +10,15 @@ import { colors } from '@/theme';
 import { PageTurner } from './PageTurner';
 import { MomentSheet } from './MomentSheet';
 import { ChapterSheet } from './ChapterSheet';
+import { CoverSheet } from './CoverSheet';
+import { bookItems, isCover, useBookInfo, type BookItem } from './Covers';
 
-const keyOf = (p: Page) => p.key;
+const keyOf = (p: BookItem) => p.key;
 
 /**
- * Memory Lane read like a book on a phone, oldest page first: swipe or tap the links at the
- * bottom to turn the page. `startKey` is the page it opens on, a moment id or `chapter:<id>`.
+ * Memory Lane read like a book on a phone, from the front cover through the pages oldest first
+ * to the back cover: swipe or tap the links at the bottom to turn the page. `startKey` is the
+ * page it opens on: a moment id, `chapter:<id>`, or `cover` for the front cover.
  */
 export function PhoneReader({ startKey }: { startKey: string }) {
   const db = useSQLiteContext();
@@ -24,17 +27,18 @@ export function PhoneReader({ startKey }: { startKey: string }) {
   const [pages, setPages] = useState<Page[] | null>(null);
   const [index, setIndex] = useState(0);
   // The page in front, so a refresh after an edit keeps you where you'd turned to.
-  const showing = useRef(startKey);
-  const order = useRef<Page[]>([]);
+  const showing = useRef(startKey === 'cover' ? 'cover:front' : startKey);
+  const order = useRef<BookItem[]>([]);
+  const info = useBookInfo(pages);
 
   useFocusEffect(
     useCallback(() => {
       listPages(db).then((all) => {
-        const ordered = [...all].reverse();
-        const i = ordered.findIndex((p) => p.key === showing.current);
+        const items = bookItems([...all].reverse(), false);
+        const i = items.findIndex((p) => p.key === showing.current);
         if (i < 0) { goBack(router, '/lane'); return; }
-        order.current = ordered;
-        setPages(ordered);
+        order.current = items;
+        setPages(all);
         setIndex(i);
       });
     }, [db, router, version]),
@@ -45,18 +49,22 @@ export function PhoneReader({ startKey }: { startKey: string }) {
     setIndex(i);
   }, []);
 
-  const render = useCallback((p: Page, turn: (dir: 1 | -1) => void) => {
+  const render = (p: BookItem, turn: (dir: 1 | -1) => void) => {
     const i = order.current.indexOf(p);
-    const nav = { page: i + 1, prev: order.current[i - 1] ?? null, next: order.current[i + 1] ?? null, turn };
-    return p.kind === 'moment' ? <MomentSheet moment={p.moment} {...nav} /> : <ChapterSheet chapter={p.chapter} {...nav} />;
-  }, []);
+    const nav = { prev: order.current[i - 1] ?? null, next: order.current[i + 1] ?? null, turn };
+    if (isCover(p)) return <CoverSheet kind={p.kind} info={info} {...nav} />;
+    // Page numbers count the pages only, after the front cover and its endpaper.
+    const page = i - 1;
+    return p.kind === 'moment' ? <MomentSheet moment={p.moment} page={page} {...nav} /> : <ChapterSheet chapter={p.chapter} page={page} {...nav} />;
+  };
 
   if (!pages) return <View style={{ flex: 1, backgroundColor: colors.scrap }} />;
 
+  const current = order.current[index];
   return (
     <View style={{ flex: 1, backgroundColor: colors.scrap }}>
-      <StatusBar style={pages[index]?.kind === 'chapter' ? 'light' : 'dark'} />
-      <PageTurner items={pages} index={index} keyOf={keyOf} onTurned={onTurned} render={render} />
+      <StatusBar style={current?.kind === 'chapter' ? 'light' : 'dark'} />
+      <PageTurner items={order.current} index={index} keyOf={keyOf} onTurned={onTurned} render={render} />
     </View>
   );
 }
