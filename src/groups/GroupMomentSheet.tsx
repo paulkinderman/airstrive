@@ -10,6 +10,7 @@ import { getSquarePrompt } from '@/db/repo';
 import { pickFromLibrary, takePhoto, type StoredPhoto } from '@/lib/photos';
 import { removeFiles } from '@/lib/files';
 import { useSync } from '@/sync/SyncProvider';
+import { emitDataChanged } from '@/sync/events';
 import { useAuth } from '@/auth/AuthProvider';
 import { todayLocal, shortDate } from '@/lib/ids';
 import { Text } from '@/ui/Text';
@@ -110,6 +111,8 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
     });
     saved.current = true;
     removeFiles(r.removedFiles);
+    // Screens underneath show this moment; refresh them now rather than on the next pick.
+    emitDataChanged();
     sync.request();
     if (r.completedGrid) router.replace({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: r.completedGrid } });
     else goBack(router);
@@ -131,6 +134,7 @@ export function GroupMomentSheet({ squareId }: { squareId: string }) {
             const r = await removeMyPart(db, momentId, userId);
             removeFiles([...r.removedFiles, ...fresh.current]);
             saved.current = true;
+            emitDataChanged();
             sync.request();
             goBack(router);
           },

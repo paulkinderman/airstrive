@@ -288,7 +288,8 @@ function SquarePanel({
 
   useEffect(() => {
     let live = true;
-    setMoment(null);
+    // Keep showing this square's moment while it reloads after an edit, so the panel doesn't blink.
+    setMoment((cur) => (square.momentId && cur?.squareStateId === square.squareStateId ? cur : null));
     if (square.momentId) getMomentForSquare(db, square.squareStateId).then((m) => { if (live) setMoment(m); });
     return () => { live = false; };
   }, [db, square.squareStateId, square.momentId, version]);

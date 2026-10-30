@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** Tells screens that synced data landed in SQLite so they can reload. */
+/** Tells screens that data in SQLite changed, from a sync pull or a local edit, so they can reload. */
 const listeners = new Set<() => void>();
 let version = 0;
 
@@ -9,7 +9,7 @@ export function emitDataChanged() {
   for (const l of listeners) l();
 }
 
-/** A number that changes whenever a pull brings in new data. Add it to a screen's reload deps. */
+/** A number that changes whenever a pull or a local edit changes data. Add it to a screen's reload deps. */
 export function useDataVersion() {
   const [v, setV] = useState(version);
   useEffect(() => {
