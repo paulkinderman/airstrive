@@ -15,21 +15,21 @@ export const kinderMemories: StarterGrid = {
     {
       name: 'Getting there',
       prompts: [
-        'Share a favorite photo from a past Thanksgiving',
+        'Predict who arrives last, then gloat',
         'Pack one ridiculous item for no reason',
         'Send a selfie from the road or the gate',
-        'Narrate the drive like a nature documentary',
+        'Make up a song about the trip',
         'Arrive and hug everyone at the door',
       ],
     },
     {
       name: 'Thanksgiving Day',
       prompts: [
-        'Make name cards with unflattering nicknames',
+        'Show up in a ridiculous turkey hat',
         'Say what you are grateful for this year',
-        'Commentate the football like it is the parade',
+        'Give a dramatic reading of the menu',
         'Take a photo of the whole table',
-        'Have pie for breakfast the next morning',
+        'Have pie for breakfast the morning after Thanksgiving',
       ],
     },
     {
@@ -37,8 +37,8 @@ export const kinderMemories: StarterGrid = {
       prompts: [
         'Stroll Avalon together after dark',
         'Recreate an old family photo, pose for pose',
-        'Lose the remote and blame the youngest',
-        'Stage a cousins talent show',
+        'Hold a family thumb war tournament',
+        'Take a group photo making turkey faces',
         'Play a board game across the generations',
       ],
     },
