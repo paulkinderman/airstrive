@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { ShelfGrid, SquareState, Suggestion } from './types';
+import type { OpenSquare, ShelfGrid, SquareState } from './types';
 
 export async function listShelf(db: SQLiteDatabase): Promise<ShelfGrid[]> {
   const grids = await db.getAllAsync<{
@@ -44,18 +44,22 @@ export async function listShelf(db: SQLiteDatabase): Promise<ShelfGrid[]> {
   return out;
 }
 
-export async function listSuggestions(db: SQLiteDatabase, limit = 8): Promise<Suggestion[]> {
-  // One revealed square from each grid first, so the strip isn't all one grid.
-  const rows = await db.getAllAsync<{ id: string; user_grid_id: string; prompt: string; title: string; color: string; rn: number }>(
-    `SELECT * FROM (
-       SELECT ss.id, ss.user_grid_id, gs.prompt, g.title, g.color,
-              ROW_NUMBER() OVER (PARTITION BY ss.user_grid_id ORDER BY ss.updated_at DESC, ss.idx) AS rn
-       FROM square_states ss
-       JOIN user_grids ug ON ug.id = ss.user_grid_id
-       JOIN grids g ON g.id = ug.grid_id
-       JOIN grid_squares gs ON gs.grid_id = g.id AND gs.idx = ss.idx
-       WHERE ss.state = 'revealed' AND ss.deleted_at IS NULL AND ug.deleted_at IS NULL
-     ) ORDER BY rn, title LIMIT ?`, limit,
+/** Every revealed square on the shelf, by grid, most recently revealed first: each home card's Next up. */
+export async function listOpenSquares(db: SQLiteDatabase): Promise<Map<string, OpenSquare[]>> {
+  const rows = await db.getAllAsync<{ id: string; user_grid_id: string; idx: number; prompt: string }>(
+    `SELECT ss.id, ss.user_grid_id, ss.idx, gs.prompt
+     FROM square_states ss
+     JOIN user_grids ug ON ug.id = ss.user_grid_id
+     JOIN grid_squares gs ON gs.grid_id = ug.grid_id AND gs.idx = ss.idx
+     WHERE ss.state = 'revealed' AND ss.deleted_at IS NULL AND ug.deleted_at IS NULL
+     ORDER BY ss.user_grid_id, ss.updated_at DESC, ss.idx`,
   );
-  return rows.map((r) => ({ squareStateId: r.id, userGridId: r.user_grid_id, prompt: r.prompt, gridTitle: r.title, gridColor: r.color }));
+  const out = new Map<string, OpenSquare[]>();
+  for (const r of rows) {
+    const sq = { squareStateId: r.id, idx: r.idx, prompt: r.prompt };
+    const list = out.get(r.user_grid_id);
+    if (list) list.push(sq);
+    else out.set(r.user_grid_id, [sq]);
+  }
+  return out;
 }
