@@ -3,6 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { useWindowDimensions, type ColorValue } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { takePendingCode } from '@/friends/pendingCode';
+import { takePendingConsent } from '@/auth/pendingConsent';
 import { useWideLayout } from '@/ui/wide';
 import { Sidebar, SIDEBAR } from '@/wide/Sidebar';
 import { colors, fonts } from '@/theme';
@@ -61,6 +62,9 @@ export default function TabsLayout() {
   useEffect(() => {
     const code = takePendingCode();
     if (code) router.push({ pathname: '/f/[code]', params: { code } });
+    // And so does linking AirStrive to Alexa.
+    const consent = takePendingConsent();
+    if (consent) router.push({ pathname: '/oauth/consent', params: { authorization_id: consent } });
   }, [router]);
 
   return (
