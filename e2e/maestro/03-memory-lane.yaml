@@ -2,7 +2,7 @@ appId: app.airstrive.mobile
 ---
 - back
 - tapOn: "Memory Lane"
-- assertVisible: "Index"
+- assertVisible: "Your scrapbook"
 # The page title is the square's prompt (Fall, index 20).
 - tapOn: "Make a fall playlist"
 - extendedWaitUntil:

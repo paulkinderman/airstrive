@@ -77,7 +77,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Grids', tabBarIcon: GridsIcon }} />
-      <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon, ...(column && { sceneStyle: column }) }} />
+      <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon }} />
       <Tabs.Screen name="atlas" options={{ title: 'Atlas', tabBarIcon: AtlasIcon, ...(column && { sceneStyle: column }) }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon, ...(column && { sceneStyle: column }) }} />
     </Tabs>

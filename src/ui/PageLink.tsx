@@ -1,14 +1,8 @@
 import { Pressable, View } from 'react-native';
-import type { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import type { Page } from '@/db/repo';
 import { Text } from './Text';
 import { colors } from '@/theme';
-
-export function openPage(router: ReturnType<typeof useRouter>, p: Page) {
-  if (p.kind === 'moment') router.replace({ pathname: '/lane/[momentId]', params: { momentId: p.moment.id } });
-  else router.replace({ pathname: '/lane/chapter/[userGridId]', params: { userGridId: p.chapter.userGridId } });
-}
 
 /** Previous / next page in Memory Lane, a moment or a chapter cover. */
 export function PageLink({ page, dir, onPress, dark }: { page: Page | null; dir: 'prev' | 'next'; onPress: (p: Page) => void; dark?: boolean }) {
