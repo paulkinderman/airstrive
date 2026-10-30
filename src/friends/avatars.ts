@@ -3,6 +3,7 @@ import { useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { supabase } from '@/lib/supabase';
 import { getMeta, setMeta } from '@/db/queue';
 import { newId } from '@/lib/ids';
+import { FETCH_IMAGES, showable } from '@/lib/remoteImage';
 import type { AvatarImage } from '@/lib/avatarImage';
 import { useAuth } from '@/auth/AuthProvider';
 
@@ -130,7 +131,22 @@ export function useAvatar(userId: string | null | undefined): AvatarSource | nul
     return () => { listeners.delete(update); };
   }, [db, me, userId]);
 
-  return source;
+  return useShowable(source);
+}
+
+/** On the web the link can't go straight into an image (see remoteImage.web.ts). */
+function useShowable(source: AvatarSource | null): AvatarSource | null {
+  const [shown, setShown] = useState<AvatarSource | null>(null);
+  const uri = source?.uri;
+  const cacheKey = source?.cacheKey;
+  useEffect(() => {
+    if (!FETCH_IMAGES) return;
+    if (!uri || !cacheKey) { setShown(null); return; }
+    let live = true;
+    showable(uri, cacheKey).then((u) => { if (live) setShown({ uri: u, cacheKey }); }).catch(() => {});
+    return () => { live = false; };
+  }, [uri, cacheKey]);
+  return FETCH_IMAGES ? shown : source;
 }
 
 function client() {

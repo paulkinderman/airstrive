@@ -3,11 +3,13 @@ import { ScrollView, View, Pressable, StyleSheet } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { listShelf, listSuggestions, type ShelfGrid, type Suggestion } from '@/db/repo';
 import { Text } from '@/ui/Text';
 import { MiniGrid } from '@/ui/MiniGrid';
 import { useAuth } from '@/auth/AuthProvider';
+import { useAvatar } from '@/friends/avatars';
 import { useSync } from '@/sync/SyncProvider';
 import { useDataVersion } from '@/sync/events';
 import { colors, radius } from '@/theme';
@@ -23,7 +25,8 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [shelf, setShelf] = useState<ShelfGrid[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const { username } = useAuth();
+  const { username, userId } = useAuth();
+  const picture = useAvatar(userId);
   const sync = useSync();
   const version = useDataVersion();
 
@@ -52,7 +55,9 @@ export default function Home() {
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Pressable onPress={() => router.push('/profile')} style={[styles.roundButton, styles.avatar]} accessibilityLabel="Profile">
-            <Text variant="title" style={{ fontSize: 18, color: '#fff' }}>{(username ?? '?').slice(0, 1).toUpperCase()}</Text>
+            {picture
+              ? <Image source={picture} cachePolicy="disk" transition={150} style={styles.picture} />
+              : <Text variant="title" style={{ fontSize: 18, color: '#fff' }}>{(username ?? '?').slice(0, 1).toUpperCase()}</Text>}
             {sync.failed > 0 && <View style={styles.badge} />}
           </Pressable>
         </View>
@@ -126,6 +131,7 @@ const styles = StyleSheet.create({
   roundButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   suggestion: { width: 170, minHeight: 118, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, gap: 10 },
   avatar: { backgroundColor: colors.ink, borderColor: colors.ink },
+  picture: { width: 42, height: 42, borderRadius: 21 },
   badge: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.paper },
   empty: { padding: 18, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.lineStrong, gap: 6 },
   gridCard: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, minHeight: 84 },
