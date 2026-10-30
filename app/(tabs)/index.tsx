@@ -51,12 +51,6 @@ export default function Home() {
           </Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable onPress={() => router.push('/lane')} style={styles.roundButton} accessibilityLabel="Memory Lane">
-            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <Path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z" />
-              <Path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
-            </Svg>
-          </Pressable>
           <Pressable onPress={() => router.push('/profile')} style={[styles.roundButton, styles.avatar]} accessibilityLabel="Profile">
             <Text variant="title" style={{ fontSize: 18, color: '#fff' }}>{(username ?? '?').slice(0, 1).toUpperCase()}</Text>
             {sync.failed > 0 && <View style={styles.badge} />}
@@ -95,8 +89,8 @@ export default function Home() {
       <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <Text variant="label">Your grids</Text>
-          <Pressable onPress={() => router.push('/atlas')}>
-            <Text variant="bodyBold" style={{ fontSize: 13, color: colors.accentDeep }}>+ New grid</Text>
+          <Pressable onPress={() => router.push('/make')}>
+            <Text variant="bodyBold" style={{ fontSize: 13, color: colors.accentDeep }}>+ Create grid</Text>
           </Pressable>
         </View>
         {shelf.length === 0 && (

@@ -146,7 +146,7 @@ export default function Make() {
         <Pressable onPress={() => goBack(router)} style={{ height: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
           <Text variant="bodyBold" style={{ color: colors.muted }}>Cancel</Text>
         </Pressable>
-        <Text variant="label">New grid</Text>
+        <Text variant="label">Create grid</Text>
         <View style={{ width: 64 }} />
       </View>
 
