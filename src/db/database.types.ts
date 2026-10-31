@@ -955,6 +955,10 @@ export type Database = {
         Args: { share_existing?: boolean; user_grid: string }
         Returns: string
       }
+      mark_notifications_read: {
+        Args: { notification?: string }
+        Returns: undefined
+      }
       moment_audience: { Args: { moment: string }; Returns: string }
       my_blocks: {
         Args: never
@@ -999,6 +1003,25 @@ export type Database = {
           people: Json
         }[]
       }
+      my_notifications: {
+        Args: { lim?: number }
+        Returns: {
+          actor_id: string
+          actor_username: string
+          created_at: string
+          grid_color: string
+          grid_title: string
+          group_id: string
+          id: string
+          kind: string
+          moment_id: string
+          moment_title: string
+          read_at: string
+          square_state_id: string
+          state: string
+        }[]
+      }
+      my_push_off: { Args: never; Returns: string[] }
       narrower: { Args: { a: string; b: string }; Returns: string }
       preview_friend_code: {
         Args: { code: string }
@@ -1010,6 +1033,11 @@ export type Database = {
       }
       profile: { Args: { target: string }; Returns: Json }
       profile_grid: { Args: { user_grid: string }; Returns: Json }
+      push_payload: { Args: { notification: string }; Returns: Json }
+      register_push_token: {
+        Args: { platform: string; token: string }
+        Returns: undefined
+      }
       regrouping: { Args: never; Returns: boolean }
       relation_to: { Args: { other: string }; Returns: string }
       remove_friend: { Args: { other: string }; Returns: undefined }
@@ -1033,8 +1061,14 @@ export type Database = {
           username: string
         }[]
       }
+      set_push_kind: {
+        Args: { kind: string; push: boolean }
+        Returns: string[]
+      }
       starting_squares: { Args: { size: string }; Returns: number[] }
       unblock_user: { Args: { other: string }; Returns: undefined }
+      unread_notifications: { Args: never; Returns: number }
+      unregister_push_token: { Args: { token: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

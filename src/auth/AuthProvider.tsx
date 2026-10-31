@@ -15,6 +15,7 @@ import { prepareForUser } from '@/sync/bootstrap';
 import { wipeLocal } from '@/sync/engine';
 import { supabaseRemote } from '@/sync/supabaseRemote';
 import { localFiles } from '@/sync/SyncProvider';
+import { forgetPush } from '@/notifications/push';
 import { ensureTemplate } from '@/atlas/catalog';
 import { accountStatus, completeOnboarding, loadAccount } from './onboarding';
 
@@ -230,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [db, googleMod]);
 
   const signOut = useCallback(async () => {
+    await forgetPush().catch(() => {});
     await forgetPhone();
     if (supabase) await supabase.auth.signOut();
     setStatus('signedOut');

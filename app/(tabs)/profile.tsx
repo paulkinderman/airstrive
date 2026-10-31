@@ -5,9 +5,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { listSharedGrids } from '@/db/repo';
-import { listFriends, listRequests, myBio, respondRequest, saveBio, type Friend, type FriendRequest } from '@/friends/api';
+import { listFriends, myBio, saveBio, type Friend } from '@/friends/api';
 import { AUDIENCE_LABEL } from '@/friends/audience';
-import { listGroupInvites, respondGroupInvite, type GroupInvite } from '@/groups/api';
 import { useLoad } from '@/friends/useLoad';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
@@ -15,11 +14,14 @@ import { useDataVersion } from '@/sync/events';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { MiniGrid } from '@/ui/MiniGrid';
-import { Avatar, Chevron, Initial } from '@/friends/bits';
+import { Avatar, Chevron } from '@/friends/bits';
 import { removeMyAvatar, setMyAvatar, useAvatar } from '@/friends/avatars';
 import { pickAvatar } from '@/lib/avatarImage';
 import { Menu, type MenuItem } from '@/ui/Menu';
 import { colors, fonts, radius } from '@/theme';
+import { listNotifications, type AppNotification } from '@/notifications/api';
+import { NotificationRow } from '@/notifications/NotificationRow';
+import { refreshUnread, useUnread } from '@/notifications/unread';
 
 type SharedGrids = Awaited<ReturnType<typeof listSharedGrids>>;
 
@@ -37,39 +39,19 @@ export default function ProfileTab() {
   const [busy, setBusy] = useState<string | null>(null);
   const [pictureMenu, setPictureMenu] = useState(false);
   const myPicture = useAvatar(auth.userId);
+  const unread = useUnread();
 
   useFocusEffect(useCallback(() => { listSharedGrids(db).then(setShared); }, [db, version]));
 
   const people = useLoad(async () => {
-    if (!auth.configured) return { friends: [] as Friend[], requests: [] as FriendRequest[], invites: [] as GroupInvite[] };
-    const [friends, requests, b, invites] = await Promise.all([
-      listFriends(), listRequests(), myBio(), listGroupInvites().catch(() => [] as GroupInvite[]),
+    if (!auth.configured) return { friends: [] as Friend[], notifications: [] as AppNotification[] };
+    const [friends, b, notifications] = await Promise.all([
+      listFriends(), myBio(), listNotifications(40).catch(() => [] as AppNotification[]),
     ]);
     setBio(b);
-    return { friends, requests, invites };
+    void refreshUnread();
+    return { friends, notifications };
   }, [auth.configured]);
-
-  const respond = async (r: FriendRequest, accept: boolean) => {
-    setBusy(r.id);
-    try { await respondRequest(r.id, accept); } catch { /* shown by the reload */ }
-    setBusy(null);
-    await people.reload();
-  };
-
-  const answerInvite = async (inv: GroupInvite, accept: boolean) => {
-    setBusy(inv.groupId);
-    try {
-      await respondGroupInvite(inv.groupId, accept);
-      if (accept) {
-        await sync.syncNow();
-        const here = await db.getFirstAsync('SELECT 1 AS x FROM user_grids WHERE id = ? AND deleted_at IS NULL', inv.groupId);
-        if (here) router.push({ pathname: '/grid/[id]', params: { id: inv.groupId } });
-        else Alert.alert('You\'re in', 'The grid will be on your shelf once it has finished downloading.');
-      }
-    } catch { /* shown by the reload */ }
-    setBusy(null);
-    await people.reload();
-  };
 
   const onSaveBio = async () => {
     setBusy('bio');
@@ -110,13 +92,27 @@ export default function ProfileTab() {
   ];
 
   const friends = people.data?.friends ?? [];
-  const requests = people.data?.requests ?? [];
-  const invites = people.data?.invites ?? [];
+  // Requests and invites waiting for an answer, then up to three other things not yet seen.
+  const all = people.data?.notifications ?? [];
+  const waiting = all.filter((n) => n.state === 'pending');
+  const news = all.filter((n) => n.state !== 'pending' && !n.readAt).slice(0, 3);
 
   return (
     <ScrollView style={{ backgroundColor: colors.paper }} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 40, gap: 14 }}>
       <View style={styles.header}>
         <Text variant="label">Profile</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+        {auth.configured && (
+          <Pressable onPress={() => router.push('/notifications')} style={styles.roundButton} accessibilityLabel={unread ? `Notifications, ${unread} new` : 'Notifications'}>
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <Path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </Svg>
+            {unread > 0 && (
+              <View style={styles.count}><Text variant="caption" style={styles.countText}>{unread > 99 ? '99+' : unread}</Text></View>
+            )}
+          </Pressable>
+        )}
         <Pressable onPress={() => router.push('/settings')} style={styles.roundButton} accessibilityLabel="Settings">
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <Circle cx={12} cy={12} r={3} />
@@ -124,6 +120,7 @@ export default function ProfileTab() {
           </Svg>
           {sync.failed > 0 && <View style={styles.badge} />}
         </Pressable>
+        </View>
       </View>
 
       <View style={[styles.card, { marginHorizontal: 20 }]}>
@@ -185,32 +182,17 @@ export default function ProfileTab() {
             <Text variant="body" style={{ color: colors.muted, paddingHorizontal: 20 }}>Couldn't reach AirStrive. Friends show up here when you're back online.</Text>
           )}
 
-          {requests.length > 0 && (
-            <Section title="Asking to be friends">
-              {requests.map((r) => (
-                <View key={r.id} style={styles.row}>
-                  <Initial name={r.username} />
-                  <Text variant="bodyBold" style={{ flex: 1 }}>{r.username}</Text>
-                  <Button label="Accept" onPress={() => respond(r, true)} disabled={busy === r.id} style={styles.smallButton} />
-                  <Button label="Not now" kind="quiet" onPress={() => respond(r, false)} disabled={busy === r.id} />
-                </View>
-              ))}
-            </Section>
-          )}
-
-          {invites.length > 0 && (
-            <Section title="Grids to do together">
-              {invites.map((inv) => (
-                <View key={inv.groupId} style={styles.row}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: inv.color }} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text variant="bodyBold">{inv.title}</Text>
-                    <Text variant="caption" style={{ color: colors.muted }}>{inv.from} invited you</Text>
-                  </View>
-                  <Button label="Join" onPress={() => answerInvite(inv, true)} disabled={busy === inv.groupId} style={styles.smallButton} />
-                  <Button label="No thanks" kind="quiet" onPress={() => answerInvite(inv, false)} disabled={busy === inv.groupId} />
-                </View>
-              ))}
+          {people.data && (
+            <Section title="Notifications">
+              {waiting.map((n) => <NotificationRow key={n.id} n={n} onChanged={people.reload} compact />)}
+              {news.map((n) => <NotificationRow key={n.id} n={n} onChanged={people.reload} compact />)}
+              {waiting.length + news.length === 0 && (
+                <Text variant="body" style={{ color: colors.muted, padding: 14 }}>You're all caught up.</Text>
+              )}
+              <Pressable onPress={() => router.push('/notifications')} style={styles.row} accessibilityRole="link">
+                <Text variant="bodyBold" style={{ flex: 1 }}>See all notifications</Text>
+                <Chevron />
+              </Pressable>
             </Section>
           )}
 
@@ -279,5 +261,6 @@ const styles = StyleSheet.create({
   bioInput: { minHeight: 70, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.lineStrong, padding: 12, fontFamily: fonts.body, fontSize: 15, color: colors.ink, textAlignVertical: 'top' },
   list: { borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line, marginTop: -1 },
-  smallButton: { height: 40, paddingHorizontal: 14 },
+  count: { position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+  countText: { color: '#fff', fontSize: 10, lineHeight: 13, fontFamily: fonts.bodyBold },
 });

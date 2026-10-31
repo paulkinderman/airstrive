@@ -8,7 +8,8 @@ import { useAvatar } from '@/friends/avatars';
 import { useSync } from '@/sync/SyncProvider';
 import { Text } from '@/ui/Text';
 import { MiniGrid } from '@/ui/MiniGrid';
-import { colors, radius } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
+import { useUnread } from '@/notifications/unread';
 
 export const SIDEBAR = 236;
 
@@ -21,6 +22,7 @@ export function Sidebar({ state, descriptors, navigateToTab, icons }: BottomTabB
   const { username, userId } = useAuth();
   const picture = useAvatar(userId);
   const sync = useSync();
+  const unread = useUnread();
   const current = state.routes[state.index]?.name;
   const profile = state.routes.find((r) => r.name === 'profile');
 
@@ -60,6 +62,11 @@ export function Sidebar({ state, descriptors, navigateToTab, icons }: BottomTabB
             <Text variant="bodyBold" numberOfLines={1}>{username ?? 'You'}</Text>
             <Text variant="body" style={{ fontSize: 13, color: colors.muted }}>Profile and settings</Text>
           </View>
+          {unread > 0 && (
+            <View style={styles.count} accessibilityLabel={`${unread} new notifications`}>
+              <Text variant="caption" style={{ color: '#fff', fontSize: 11, lineHeight: 14, fontFamily: fonts.bodyBold }}>{unread > 99 ? '99+' : unread}</Text>
+            </View>
+          )}
         </NavItem>
       )}
     </View>
@@ -93,5 +100,6 @@ const styles = StyleSheet.create({
   me: { marginTop: 'auto', flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: radius.md },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   picture: { width: 40, height: 40, borderRadius: 20 },
+  count: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.card },
 });

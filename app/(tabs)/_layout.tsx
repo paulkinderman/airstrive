@@ -7,6 +7,8 @@ import { takePendingConsent } from '@/auth/pendingConsent';
 import { useWideLayout } from '@/ui/wide';
 import { Sidebar, SIDEBAR } from '@/wide/Sidebar';
 import { colors, fonts } from '@/theme';
+import { usePushSetup } from '@/notifications/usePushSetup';
+import { useUnread } from '@/notifications/unread';
 
 function GridsIcon({ color }: { color: ColorValue }) {
   return (
@@ -56,6 +58,8 @@ export default function TabsLayout() {
   const wide = useWideLayout();
   const { width } = useWindowDimensions();
   // The scene still covers the whole area beside the sidebar, so the tab behind it never shows through.
+  usePushSetup();
+  const unread = useUnread();
   const column = wide ? { backgroundColor: colors.scrap, paddingHorizontal: Math.max(0, (width - SIDEBAR - COLUMN) / 2) } : undefined;
 
   // A friend link opened before signing in picks up here once the shelf is ready.
@@ -83,7 +87,11 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Grids', tabBarIcon: GridsIcon }} />
       <Tabs.Screen name="lane" options={{ title: 'Memory Lane', tabBarIcon: LaneIcon }} />
       <Tabs.Screen name="atlas" options={{ title: 'Atlas', tabBarIcon: AtlasIcon, ...(column && { sceneStyle: column }) }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon, ...(column && { sceneStyle: column }) }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ProfileIcon,
+        // The unread notifications, in red, so they show from every tab.
+        tabBarBadge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
+        tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontFamily: fonts.bodyBold, fontSize: 11 },
+        ...(column && { sceneStyle: column }) }} />
     </Tabs>
   );
 }
