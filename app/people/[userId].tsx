@@ -3,7 +3,7 @@ import { View, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } fro
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import {
   blockUser, cancelRequest, getProfile, removeFriend, requestFriend, respondRequest, type Relation,
 } from '@/friends/api';
@@ -28,6 +28,7 @@ export default function PersonProfile() {
   const insets = useSafeAreaInsets();
   const profile = useLoad(() => getProfile(userId), [userId]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [requestMenu, setRequestMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const p = profile.data;
 
@@ -98,10 +99,16 @@ export default function PersonProfile() {
             </View>
           </View>
           {p.relation !== 'friends' && p.relation !== 'self' && (
-            <Button label={RELATION_BUTTON[p.relation]} kind={p.relation === 'requested' ? 'secondary' : 'primary'} onPress={act} disabled={busy} />
-          )}
-          {p.relation === 'incoming' && (
-            <Button label="Not now" kind="quiet" onPress={async () => { await respondRequest(p.id, false).catch(() => {}); await profile.reload(); }} style={{ alignSelf: 'flex-start' }} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Button label={RELATION_BUTTON[p.relation]} kind={p.relation === 'requested' ? 'secondary' : 'primary'} onPress={act} disabled={busy} style={{ flex: 1 }} />
+              {p.relation === 'incoming' && (
+                <Pressable onPress={() => setRequestMenu(true)} style={styles.moreButton} accessibilityLabel="More options for this request">
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.2} strokeLinecap="round">
+                    <Path d="M4 7h16M4 12h16M4 17h16" />
+                  </Svg>
+                </Pressable>
+              )}
+            </View>
           )}
           {p.bio ? <Text variant="body">{p.bio}</Text> : null}
 
@@ -128,6 +135,13 @@ export default function PersonProfile() {
           </View>
         </ScrollView>
       )}
+      <Menu
+        visible={requestMenu}
+        title={p ? `${p.username} wants to be friends` : ''}
+        note="They won't be told. You can still add them later."
+        items={p ? [{ label: 'Not now', onPress: async () => { await respondRequest(p.id, false).catch(() => {}); await profile.reload(); } }] : []}
+        onClose={() => setRequestMenu(false)}
+      />
       <Menu visible={menuOpen} title={p?.username ?? ''} items={menuItems} onClose={() => setMenuOpen(false)} />
     </View>
   );
@@ -136,6 +150,7 @@ export default function PersonProfile() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingBottom: 6 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  moreButton: { width: 50, height: 50, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.lineStrong, alignItems: 'center', justifyContent: 'center' },
   list: { borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 68, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.line, marginTop: -1 },
 });
