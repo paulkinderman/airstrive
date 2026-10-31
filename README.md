@@ -60,15 +60,14 @@ supabase functions deploy delete-account
 Push notifications (once per project; until then notifications still show in the app, only the pushes are skipped):
 
 ```sh
-supabase secrets set PUSH_SECRET=<a long random string>
 supabase functions deploy send-push --no-verify-jwt
 ```
 
-and in the SQL editor, with the same secret:
+and in the SQL editor (the secret is made in the database and never leaves it):
 
 ```sql
 select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'push_function_url');
-select vault.create_secret('<the same random string>', 'push_secret');
+select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'push_secret');
 ```
 
 Pushes go through Expo's push service, which needs the APNs key: enable Push Notifications on the App IDs `app.airstrive.mobile` and `app.airstrive.mobile.preview` in the Apple Developer portal, then `eas credentials -p ios` → the profile → Push Notifications → set up a push key.

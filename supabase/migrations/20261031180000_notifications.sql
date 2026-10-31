@@ -7,10 +7,9 @@
 -- secrets below); the function reads what to send from push_payload(), which applies the
 -- person's push settings, blocks, and the badge count.
 --
--- Per project, once:
+-- Per project, once (the secret is made in the database and never leaves it):
 --   select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'push_function_url');
---   select vault.create_secret('<random secret>', 'push_secret');
---   supabase secrets set PUSH_SECRET=<the same secret>
+--   select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'push_secret');
 --   supabase functions deploy send-push --no-verify-jwt
 -- Until then notifications still fill the list; only the pushes are skipped.
 
@@ -84,6 +83,17 @@ begin
           jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || secret);
 exception when others then
   raise warning 'push not queued: %', sqlerrm;
+end $$;
+
+/** Whether a caller of send-push holds the push secret, so the function needn't keep its own copy. */
+create or replace function public.push_secret_matches(secret text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare
+  expected text;
+begin
+  if secret is null or to_regnamespace('vault') is null then return false; end if;
+  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1' into expected using 'push_secret';
+  return expected is not null and expected = secret;
 end $$;
 
 /**
@@ -345,7 +355,7 @@ do $$
 declare f text;
 begin
   foreach f in array array[
-    'public.queue_push(uuid)', 'public.add_notification(uuid, text, uuid, uuid, uuid, uuid)',
+    'public.queue_push(uuid)', 'public.push_secret_matches(text)', 'public.add_notification(uuid, text, uuid, uuid, uuid, uuid)',
     'public.notification_feed(uuid, int)', 'public.push_payload(uuid)',
     'public.notify_friend_request()', 'public.notify_friendship()', 'public.notify_group_invite()',
     'public.notify_group_joined()', 'public.notify_group_moment()'
@@ -353,6 +363,7 @@ begin
     execute format('revoke execute on function %s from public, anon, authenticated', f);
   end loop;
   execute 'grant execute on function public.push_payload(uuid) to service_role';
+  execute 'grant execute on function public.push_secret_matches(text) to service_role';
   foreach f in array array[
     'public.my_notifications(int)', 'public.unread_notifications()', 'public.mark_notifications_read(uuid)',
     'public.my_push_off()', 'public.set_push_kind(text, boolean)',

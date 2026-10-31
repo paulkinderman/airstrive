@@ -378,7 +378,7 @@ allow_dynamic_registration = false
 [functions.alexa]
 verify_jwt = false
 
-# The database calls this with its own shared secret (PUSH_SECRET), not a user's token.
+# The database calls this with its own secret from the vault, not a user's token.
 [functions.send-push]
 verify_jwt = false
 

@@ -1,7 +1,7 @@
 // Delivers one notification as a push. The database calls this through pg_net when a
-// notification is added (queue_push in the notifications migration), with the shared
-// push secret as its bearer token. What to send, and to which phones, comes from
-// push_payload(), which already applies the person's push settings and blocks.
+// notification is added (queue_push in the notifications migration), with the push secret
+// from its vault as the bearer token, which the database then checks (push_secret_matches).
+// What to send, and to which phones, comes from push_payload(), which applies the person's push settings and blocks.
 //
 // Pushes go through Expo's push service, which holds the APNs key (eas credentials).
 // Phones Apple says are gone are forgotten.
@@ -19,13 +19,14 @@ interface Ticket { status: 'ok' | 'error'; details?: { error?: string } }
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
-  const secret = Deno.env.get('PUSH_SECRET');
-  if (!secret || req.headers.get('Authorization') !== `Bearer ${secret}`) return new Response('forbidden', { status: 403 });
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+  // Only the database knows the push secret (vault), so it checks it.
+  const secret = (req.headers.get('Authorization') ?? '').replace(/^Bearer /, '');
+  const { data: ok } = await admin.rpc('push_secret_matches', { secret });
+  if (ok !== true) return new Response('forbidden', { status: 403 });
 
   const { notification_id: id } = await req.json().catch(() => ({}));
   if (typeof id !== 'string') return new Response('notification_id needed', { status: 400 });
-
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data, error } = await admin.rpc('push_payload', { notification: id });
   if (error) return new Response(`payload: ${error.message}`, { status: 500 });
   const p = data as Payload | null;

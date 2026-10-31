@@ -106,6 +106,7 @@ begin
   assert p->'data'->>'squareStateId' = '92000000-0000-4000-8000-000000000020', 'tap opens the square';
   assert (p->>'badge')::int = 3, 'badge counts the unread';
   assert public.push_payload((select id from public.notifications where user_id = '90000000-0000-4000-8000-000000000002' limit 1)) is null, 'no phone, nothing to send';
+  assert not public.push_secret_matches('anything'), 'no vault, no secret';
 end $$;
 
 set role authenticated;
