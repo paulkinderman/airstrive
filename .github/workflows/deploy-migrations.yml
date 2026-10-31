@@ -48,5 +48,7 @@ jobs:
           version: latest
       - if: steps.config.outputs.ready == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      # --include-all also applies a migration that reached main after a later one was
+      # already deployed (two branches merging out of order), instead of stopping.
       - if: steps.config.outputs.ready == 'true'
-        run: supabase db push
+        run: supabase db push --linked --include-all
