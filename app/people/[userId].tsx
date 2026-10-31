@@ -19,7 +19,7 @@ import { colors, radius } from '@/theme';
 const RELATION_BUTTON: Record<Exclude<Relation, 'self' | 'friends'>, string> = {
   none: 'Add friend',
   requested: 'Requested',
-  incoming: 'Accept',
+  incoming: 'Accept friend request',
 };
 
 export default function PersonProfile() {
@@ -94,15 +94,16 @@ export default function PersonProfile() {
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="title" style={{ fontSize: 24 }}>{p.username}</Text>
               {p.relation === 'friends' && <Text variant="caption" style={{ color: colors.muted }}>Friends</Text>}
+              {p.relation === 'incoming' && <Text variant="caption" style={{ color: colors.muted }}>Wants to be friends</Text>}
             </View>
           </View>
-          {p.bio ? <Text variant="body">{p.bio}</Text> : null}
           {p.relation !== 'friends' && p.relation !== 'self' && (
             <Button label={RELATION_BUTTON[p.relation]} kind={p.relation === 'requested' ? 'secondary' : 'primary'} onPress={act} disabled={busy} />
           )}
           {p.relation === 'incoming' && (
             <Button label="Not now" kind="quiet" onPress={async () => { await respondRequest(p.id, false).catch(() => {}); await profile.reload(); }} style={{ alignSelf: 'flex-start' }} />
           )}
+          {p.bio ? <Text variant="body">{p.bio}</Text> : null}
 
           <View style={{ gap: 8 }}>
             <Text variant="label">Grids</Text>

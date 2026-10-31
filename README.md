@@ -57,6 +57,22 @@ supabase db push                          # supabase/migrations (then npm run ge
 supabase functions deploy delete-account
 ```
 
+Push notifications (once per project; until then notifications still show in the app, only the pushes are skipped):
+
+```sh
+supabase secrets set PUSH_SECRET=<a long random string>
+supabase functions deploy send-push --no-verify-jwt
+```
+
+and in the SQL editor, with the same secret:
+
+```sql
+select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'push_function_url');
+select vault.create_secret('<the same random string>', 'push_secret');
+```
+
+Pushes go through Expo's push service, which needs the APNs key: enable Push Notifications on the App IDs `app.airstrive.mobile` and `app.airstrive.mobile.preview` in the Apple Developer portal, then `eas credentials -p ios` → the profile → Push Notifications → set up a push key.
+
 The admin site has its own setup; see [admin/README.md](admin/README.md).
 
 In the Supabase dashboard, enable the Apple provider (client id `app.airstrive.mobile`) and, if used, Google (web client id, with the iOS client id under authorized client ids).

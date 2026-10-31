@@ -146,7 +146,14 @@
           "microphonePermission": false
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#F5B61C"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

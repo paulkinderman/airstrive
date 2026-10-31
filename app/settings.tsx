@@ -142,6 +142,14 @@ export default function Settings() {
             : <Button label="Sync now" kind="secondary" onPress={sync.syncNow} disabled={slowSync} />)}
         </View>
 
+        {auth.configured && (
+          <View style={styles.card}>
+            <Text variant="label">Notifications</Text>
+            <Text variant="body" style={{ color: colors.muted, fontSize: 14 }}>Choose what sends a push to your phone.</Text>
+            <Button label="Manage push notifications" kind="secondary" onPress={() => router.push('/notifications/settings')} />
+          </View>
+        )}
+
         <View style={styles.card}>
           <Text variant="label">Your data</Text>
           <Text variant="body" style={{ color: colors.muted, fontSize: 14 }}>

@@ -79,6 +79,8 @@ function Routes() {
           <Stack.Screen name="lane/[momentId]" />
           <Stack.Screen name="lane/chapter/[userGridId]" options={{ contentStyle: { backgroundColor: colors.night } }} />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="notifications/index" />
+          <Stack.Screen name="notifications/settings" />
           <Stack.Screen name="atlas/[gridId]" />
           <Stack.Screen name="make" options={{ presentation: 'modal' }} />
           <Stack.Screen name="report/[gridId]" options={{ presentation: 'modal' }} />
