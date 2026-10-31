@@ -75,7 +75,7 @@ Every merge to `main` that touches the app builds for iOS on EAS and uploads the
 
 Each profile reads its environment variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, the Google client ids, `EXPO_PUBLIC_FLAGS`) from the matching environment on expo.dev. Sign in with Google needs an iOS client id for `app.airstrive.mobile.preview` before it works in the preview app; leave it out there and the preview app signs in with Apple only. Add `app.airstrive.mobile.preview` to the dev Supabase project's Apple client ids.
 
-Feature flags (`src/lib/flags.ts`) keep unfinished work on `main` hidden: wrap it in `flag('name')`, list the name in `EXPO_PUBLIC_FLAGS` for the preview environment to try it, and for production when it's ready.
+Feature flags (`src/lib/flags.ts`) keep unfinished work on `main` hidden: wrap it in `flag('name')`, list the name in `EXPO_PUBLIC_FLAGS` for the preview environment to try it, and for production when it's ready. `emailSignIn` shows "Continue with email" on iPhone; list it in an environment once that Supabase project has custom SMTP, since the built-in mailer only reaches the project's team (web and Android always show it).
 
 One-time setup:
 
