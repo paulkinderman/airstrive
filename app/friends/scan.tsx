@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { codeFrom } from '@/friends/links';
+import { parseInvite, inviteRoute } from '@/friends/links';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors, radius } from '@/theme';
@@ -38,16 +38,16 @@ export default function Scan() {
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={({ data }) => {
           if (done.current) return;
-          const code = codeFrom(data);
-          if (!code) { setWrong(true); return; }
+          const invite = parseInvite(data);
+          if (!invite) { setWrong(true); return; }
           done.current = true;
-          router.replace({ pathname: '/f/[code]', params: { code } });
+          router.replace(inviteRoute(invite));
         }}
       />
       <View style={[styles.overlay, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
         <Text variant="title" style={{ color: '#fff', textAlign: 'center' }}>Point at their AirStrive QR code</Text>
         <View style={styles.frame} />
-        {wrong && <Text variant="body" style={{ color: '#fff', textAlign: 'center' }}>That isn't an AirStrive friend code.</Text>}
+        {wrong && <Text variant="body" style={{ color: '#fff', textAlign: 'center' }}>That isn't an AirStrive QR code.</Text>}
         <Button label="Cancel" kind="secondary" onPress={() => goBack(router, '/profile')} style={{ alignSelf: 'stretch' }} />
       </View>
     </View>

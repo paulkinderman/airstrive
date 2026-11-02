@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Brand } from '@/ui/Brand';
+import { InviteBanner } from '@/friends/InviteCard';
 import { hasSignedInBefore } from '@/auth/returning';
 import { flag } from '@/lib/flags';
 import { colors, fonts, radius } from '@/theme';
@@ -58,6 +59,8 @@ export default function Welcome() {
             )}
           </Brand>
         </View>
+        <InviteBanner />
+        <View style={{ height: 12 }} />
 
         {emailStep !== 'off' ? (
           <View style={{ gap: 12 }}>

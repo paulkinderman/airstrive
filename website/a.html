@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>A grid to try · AirStrive</title>
+  <meta name="description" content="Someone sent you a grid to try on AirStrive.">
+  <meta name="theme-color" content="#F5B61C">
+  <meta property="og:title" content="Try this grid on AirStrive">
+  <meta property="og:description" content="Fill in grids of small experiences, one square at a time, and see the moments your friends share.">
+  <meta property="og:image" content="/icon-512.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Fredoka:wght@600&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="36" height="36"><span>Air<b>Strive</b></span></a>
+  </header>
+
+  <!-- The same page serves /f, /g, /a and /p links; website/invite.js fills it in. -->
+  <main class="wrap doc invite">
+    <h1 id="title">Someone sent you a grid to try</h1>
+    <p id="lede">A grid of small experiences to fill in, one square at a time, keeping a photo and a few words for each.</p>
+    <div id="extra"></div>
+    <div id="actions">
+      <p class="actions">
+        <a class="btn" id="open-app" href="#">Open in the AirStrive app</a>
+        <a class="btn ghost" id="open-web" href="/app/">Open in your browser</a>
+        <a class="btn ghost" id="get-app" href="#" hidden>Get the iPhone app</a>
+      </p>
+      <p class="note muted">New to AirStrive? Open it in your browser and sign up, and this invite waits for you.
+        Installing the app instead? <a href="#" id="copy">Copy this invite</a> first, then paste it when the app asks.
+        <span id="copied" hidden>Copied.</span></p>
+      <p class="note muted invite-link" id="link"></p>
+    </div>
+  </main>
+
+  <script src="/config.js"></script>
+  <script src="/invite.js"></script>
+</body>
+</html>

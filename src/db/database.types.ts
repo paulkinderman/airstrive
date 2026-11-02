@@ -54,21 +54,21 @@ export type Database = {
         Row: {
           code: string
           created_at: string
-          expires_at: string
+          expires_at: string | null
           used_at: string | null
           user_id: string
         }
         Insert: {
           code: string
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           used_at?: string | null
           user_id: string
         }
         Update: {
           code?: string
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           used_at?: string | null
           user_id?: string
         }
@@ -316,6 +316,45 @@ export type Database = {
           },
         ]
       }
+      group_links: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          group_id: string
+          stopped_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          group_id: string
+          stopped_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          group_id?: string
+          stopped_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_links_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "user_grids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -543,6 +582,45 @@ export type Database = {
           },
           {
             foreignKeyName: "moments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      peek_links: {
+        Row: {
+          code: string
+          created_at: string
+          stopped_at: string | null
+          user_grid_id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          stopped_at?: string | null
+          user_grid_id: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          stopped_at?: string | null
+          user_grid_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peek_links_user_grid_id_fkey"
+            columns: ["user_grid_id"]
+            isOneToOne: false
+            referencedRelation: "user_grids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peek_links_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -865,6 +943,7 @@ export type Database = {
     }
     Functions: {
       accept_friend_code: { Args: { code: string }; Returns: string }
+      accept_peek_link: { Args: { code: string }; Returns: string }
       admin_clear_avatar: { Args: { target: string }; Returns: string }
       admin_moment: { Args: { moment: string }; Returns: Json }
       admin_resolve_report: {
@@ -927,6 +1006,7 @@ export type Database = {
       }
       cancel_request: { Args: { other: string }; Returns: undefined }
       claim_username: { Args: { name: string }; Returns: string }
+      friend_code_owner: { Args: { code: string }; Returns: string }
       friend_moments: {
         Args: { lim?: number }
         Returns: {
@@ -942,6 +1022,12 @@ export type Database = {
           username: string | null
         }[]
       }
+      grid_card: { Args: { grid: string }; Returns: Json }
+      group_link: { Args: { grp: string }; Returns: string }
+      invite_preview: {
+        Args: { code: string; from_code?: string; kind: string }
+        Returns: Json
+      }
       invite_to_group: {
         Args: { friend: string; grp: string }
         Returns: string
@@ -949,6 +1035,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_blocked: { Args: { a: string; b: string }; Returns: boolean }
       is_group_member: { Args: { g: string }; Returns: boolean }
+      join_group_link: { Args: { code: string }; Returns: string }
       leave_group: { Args: { grp: string }; Returns: string }
       make_friends: { Args: { a: string; b: string }; Returns: undefined }
       make_group: {
@@ -1023,6 +1110,9 @@ export type Database = {
       }
       my_push_off: { Args: never; Returns: string[] }
       narrower: { Args: { a: string; b: string }; Returns: string }
+      new_share_code: { Args: never; Returns: string }
+      peek_grid: { Args: { code: string }; Returns: string }
+      peek_link: { Args: { user_grid: string }; Returns: string }
       preview_friend_code: {
         Args: { code: string }
         Returns: {
@@ -1043,6 +1133,7 @@ export type Database = {
       remove_friend: { Args: { other: string }; Returns: undefined }
       request_friend: { Args: { target: string }; Returns: string }
       require_admin: { Args: never; Returns: undefined }
+      reset_friend_code: { Args: never; Returns: string }
       respond_group_invite: {
         Args: { accept: boolean; grp: string }
         Returns: undefined
@@ -1066,6 +1157,8 @@ export type Database = {
         Returns: string[]
       }
       starting_squares: { Args: { size: string }; Returns: number[] }
+      stop_group_link: { Args: { grp: string }; Returns: undefined }
+      stop_peek_link: { Args: { user_grid: string }; Returns: undefined }
       unblock_user: { Args: { other: string }; Returns: undefined }
       unread_notifications: { Args: never; Returns: number }
       unregister_push_token: { Args: { token: string }; Returns: undefined }

@@ -7,6 +7,9 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/f/:code", "destination": "/f" },
+    { "source": "/g/:code", "destination": "/g" },
+    { "source": "/a/:grid", "destination": "/a" },
+    { "source": "/p/:code", "destination": "/p" },
     { "source": "/app/(.*)", "destination": "/app" }
   ],
   "headers": [

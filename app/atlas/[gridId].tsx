@@ -12,10 +12,20 @@ import { shelfCopyOf } from '@/db/repo';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSync } from '@/sync/SyncProvider';
 import { Button } from '@/ui/Button';
-import { colors } from '@/theme';
+import { Text } from '@/ui/Text';
+import { acceptCode, myFriendCode } from '@/friends/api';
+import { gridLink, cleanCode } from '@/friends/links';
+import { shareLink } from '@/friends/invites';
+import { useInvitePreview } from '@/friends/InviteGate';
+import { colors, radius } from '@/theme';
 
 export default function AtlasPreview() {
-  const { gridId } = useLocalSearchParams<{ gridId: string }>();
+  const params = useLocalSearchParams<{ gridId: string; from?: string }>();
+  const { gridId } = params;
+  // Opened from someone's "Try this grid" link: who sent it, and whether you're friends yet.
+  const from = cleanCode(params.from);
+  const [befriended, setBefriended] = useState(false);
+  const sent = useInvitePreview(from ? { kind: 'a', code: gridId, from } : null, befriended ? 1 : 0);
   const db = useSQLiteContext();
   const router = useRouter();
   const { userId, configured } = useAuth();
@@ -70,6 +80,34 @@ export default function AtlasPreview() {
     }
   };
 
+  const befriend = async () => {
+    if (!from || busy) return;
+    setBusy(true);
+    try {
+      if (await acceptCode(from)) setBefriended(true);
+      else Alert.alert("That didn't work", 'They may have made a new link since.');
+    } catch {
+      Alert.alert("Couldn't reach AirStrive", 'Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Only grids in the Atlas can be sent: anyone can open those.
+  const sendable = configured && (grid.isOfficial || !!grid.sharedAt);
+  const send = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const code = await myFriendCode().catch(() => null);
+      await shareLink(`Try ${grid.title} with me on AirStrive:`, gridLink(grid.id, code));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sender = sent && sent !== 'error' && sent.kind === 'a' && sent.from ? sent : null;
+
   const mine = !!grid.authorId && grid.authorId === userId;
   const canReport = !grid.isOfficial && !mine;
 
@@ -92,6 +130,17 @@ export default function AtlasPreview() {
       }
       footer={
         <View style={{ flex: 1, gap: 10 }}>
+          {sender && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line }}>
+              <Text variant="body" style={{ flex: 1 }}>
+                <Text variant="bodyBold">{sender.from}</Text>{' sent you this grid.'}
+                {sender.relation === 'friends' ? " You're friends." : ''}
+              </Text>
+              {sender.relation !== 'friends' && sender.relation !== 'self' && (
+                <Button label="Be friends" kind="secondary" onPress={befriend} disabled={busy} />
+              )}
+            </View>
+          )}
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {copy ? (
               <Button label="On your shelf · open it" kind="secondary" onPress={() => router.replace({ pathname: '/grid/[id]', params: { id: copy } })} style={{ flex: 1 }} />
@@ -109,6 +158,7 @@ export default function AtlasPreview() {
             </Pressable>
           </View>
           {configured && <Button label="Do this together with friends" kind="secondary" onPress={together} disabled={busy} />}
+          {sendable && <Button label="Send it to a friend" kind="quiet" onPress={send} disabled={busy} />}
         </View>
       }
     />

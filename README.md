@@ -13,7 +13,7 @@ This is **v2**: everything in v1 (Sign in with Apple, sync between phones throug
 And friends:
 
 - **Profile tab.** Your username, a profile picture (seen only by friends and the people you do grids with), a line about you, the grids you share, your friends and friend requests, and Settings.
-- **Friends** are mutual. Add someone by searching their username (three letters or more) and sending a request, or in person with your QR code or a link (each works once; links last 7 days). Remove and block are silent.
+- **Friends** are mutual. Add someone by searching their username (three letters or more) and sending a request, or in person with your QR code or friend link (they keep working until you get a new one). Remove and block are silent.
 - **Audiences.** Every grid is Private, Friends or Public (anyone on AirStrive who opens your profile), and each moment in it can match the grid or be narrower. Everything starts Private. Place, weather and who you were with are never shown to anyone else.
 - **Someone's profile** shows the grids that reach you, read-only, with the moments you're allowed to see. There's no feed, and nothing is counted or ranked.
 - **Reports** on moments and people, beside grid reports in the admin site, which can hide a moment or suspend someone's sharing.
@@ -25,6 +25,14 @@ And grids done together:
 - **Group or Private.** Each person's words, and each photo, are seen by the group or kept to themselves. A square done with only Private words still shows as done to everyone.
 - **Only the group.** A group grid never shows on profiles or to other friends. Its template can still be shared to the Atlas.
 - **Leaving** takes the grid off your shelf and leaves what you shared for the others. When the last person leaves, the grid is deleted.
+
+And share links, to bring friends in (each works for someone who hasn't signed up yet: the website shows what it's for, and the link waits through sign-up and onboarding):
+
+- **Be my friend** (`/f/CODE`): your friend link and QR code. Whoever opens it becomes your friend.
+- **Join my grid** (`/g/CODE`): from "Invite with a link" on a group grid. Whoever opens it joins the grid and becomes friends with whoever shared it. Anyone in the group can turn the link off.
+- **Try this grid** (`/a/GRID?f=CODE`): "Send it to a friend" on an Atlas grid. They get their own copy, and a button to be friends with you.
+- **See my grid** (`/p/CODE`): "Send a link to see it" on a Friends or Public grid. Anyone with it sees the board and the titles of moments your friends can see, never words or photos, and can ask to be friends. Making the grid Private turns the link off.
+- **Installing from the App Store** loses the link, so the website copies it first ("Copy this invite", or "Get the iPhone app" once `EXPO_PUBLIC_APP_STORE_URL` is set), and onboarding offers to paste it.
 
 The phone's SQLite database stays the source of truth, so everything works offline; the Atlas shows what it last fetched.
 

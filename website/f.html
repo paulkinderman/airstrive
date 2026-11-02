@@ -23,28 +23,25 @@
     <a class="brand" href="/"><img src="/icon-512.png" alt="" width="36" height="36"><span>Air<b>Strive</b></span></a>
   </header>
 
-  <main class="wrap doc">
-    <h1>Someone wants to be friends</h1>
-    <p>Friends on AirStrive see the grids and moments each of you chooses to share with friends. Nothing private is shared, and either of you can remove the other at any time.</p>
-    <p id="actions">
-      <a class="btn" id="open-app" href="#">Open in the AirStrive app</a>
-      <a class="btn small" id="open-web" href="/app/">Open in your browser</a>
-    </p>
-    <p class="updated" id="note">New to AirStrive? Open it in your browser and sign in; the invite waits for you.</p>
+  <!-- The same page serves /f, /g, /a and /p links; website/invite.js fills it in. -->
+  <main class="wrap doc invite">
+    <h1 id="title">Someone wants to be friends</h1>
+    <p id="lede">Friends on AirStrive see the grids and moments each of you chooses to share with friends. Nothing private is shared, and either of you can remove the other at any time.</p>
+    <div id="extra"></div>
+    <div id="actions">
+      <p class="actions">
+        <a class="btn" id="open-app" href="#">Open in the AirStrive app</a>
+        <a class="btn ghost" id="open-web" href="/app/">Open in your browser</a>
+        <a class="btn ghost" id="get-app" href="#" hidden>Get the iPhone app</a>
+      </p>
+      <p class="note muted">New to AirStrive? Open it in your browser and sign up, and this invite waits for you.
+        Installing the app instead? <a href="#" id="copy">Copy this invite</a> first, then paste it when the app asks.
+        <span id="copied" hidden>Copied.</span></p>
+      <p class="note muted invite-link" id="link"></p>
+    </div>
   </main>
 
-  <script>
-    // /f/<code>: the QR code and "Share my link" both point here (src/friends/links.ts).
-    // The app opens airstrive://f/<code>; the web app has the same screen at /app/f/<code>.
-    var code = (location.pathname.match(/\/f\/([A-Za-z0-9]{12})\/?$/) || [])[1];
-    if (code) {
-      document.getElementById('open-app').href = 'airstrive://f/' + code;
-      document.getElementById('open-web').href = '/app/f/' + code;
-    } else {
-      document.querySelector('h1').textContent = "This invite link isn't complete";
-      document.getElementById('actions').hidden = true;
-      document.getElementById('note').textContent = 'Ask your friend to send it again, or find them by username in AirStrive.';
-    }
-  </script>
+  <script src="/config.js"></script>
+  <script src="/invite.js"></script>
 </body>
 </html>

@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { useWindowDimensions, type ColorValue } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
-import { takePendingCode } from '@/friends/pendingCode';
+import { takePendingInvite } from '@/friends/pendingInvite';
+import { inviteRoute } from '@/friends/links';
 import { takePendingConsent } from '@/auth/pendingConsent';
 import { useWideLayout } from '@/ui/wide';
 import { Sidebar, SIDEBAR } from '@/wide/Sidebar';
@@ -62,10 +63,10 @@ export default function TabsLayout() {
   const unread = useUnread();
   const column = wide ? { backgroundColor: colors.scrap, paddingHorizontal: Math.max(0, (width - SIDEBAR - COLUMN) / 2) } : undefined;
 
-  // A friend link opened before signing in picks up here once the shelf is ready.
+  // A share link opened before signing in picks up here once the shelf is ready.
   useEffect(() => {
-    const code = takePendingCode();
-    if (code) router.push({ pathname: '/f/[code]', params: { code } });
+    const invite = takePendingInvite();
+    if (invite) router.push(inviteRoute(invite));
     // And so does linking AirStrive to Alexa.
     const consent = takePendingConsent();
     if (consent) router.push({ pathname: '/oauth/consent', params: { authorization_id: consent } });

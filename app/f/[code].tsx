@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { goBack } from '@/lib/goBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { acceptCode, previewCode, type Person } from '@/friends/api';
-import { codeFrom } from '@/friends/links';
-import { savePendingCode } from '@/friends/pendingCode';
+import { cleanCode } from '@/friends/links';
+import { InviteGate } from '@/friends/InviteGate';
 import { Initial } from '@/friends/bits';
-import { useAuth } from '@/auth/AuthProvider';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors } from '@/theme';
@@ -15,16 +14,8 @@ import { colors } from '@/theme';
 /** Where a friend link or a scanned QR code lands: "Ana wants to be friends". */
 export default function FriendLink() {
   const params = useLocalSearchParams<{ code: string }>();
-  const code = codeFrom(params.code ?? '');
-  const { status } = useAuth();
-
-  if (status !== 'ready') {
-    if (status === 'loading' || status === 'settingUp') return <View style={{ flex: 1, backgroundColor: colors.paper }} />;
-    // Signed out or still setting up the account: come back to this once the shelf is ready.
-    if (code) savePendingCode(code);
-    return <Redirect href="/" />;
-  }
-  return <Invite code={code} />;
+  const code = cleanCode(params.code);
+  return <InviteGate invite={code ? { kind: 'f', code } : null}><Invite code={code} /></InviteGate>;
 }
 
 function Invite({ code }: { code: string | null }) {
@@ -59,7 +50,7 @@ function Invite({ code }: { code: string | null }) {
       <View style={page}>
         <Text variant="display">This link doesn't work</Text>
         <Text variant="body" style={{ color: colors.muted }}>
-          {state === 'error' ? "Couldn't reach AirStrive. Check your connection and try again." : 'Friend links work once and for 7 days. Ask for a new one, or find them by username.'}
+          {state === 'error' ? "Couldn't reach AirStrive. Check your connection and try again." : 'They may have made a new link since. Ask them for it, or find them by username.'}
         </Text>
         <View style={{ flex: 1 }} />
         <Button label="Find them by username" onPress={() => router.replace('/friends/add')} />

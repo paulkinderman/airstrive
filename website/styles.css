@@ -143,3 +143,16 @@ footer nav { display: flex; gap: 20px; }
 .atlas-make h3 { font-size: 20px; }
 .atlas-make p { font-size: 14px; color: var(--muted); }
 @media (max-width: 860px) { #atlas .lane > div:last-child { order: -1; } }
+
+/* Share-link landing pages (f.html, g.html, a.html, p.html, invite.js) */
+.invite #extra { margin-top: 24px; }
+.invite .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.invite .note { margin-top: 16px; font-size: 15px; }
+.invite-link { word-break: break-all; font-size: 13px !important; }
+.invite-board { display: grid; gap: 5px; max-width: 360px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; }
+.invite-board i { aspect-ratio: 1; border-radius: 5px; background: var(--hidden); }
+.invite-board i.r { background: var(--c); opacity: .3; }
+.invite-board i.d { background: var(--c); }
+.invite-list { margin: 16px 0 0; padding-left: 20px; }
+.invite-list li { margin: 4px 0; }
+.invite [hidden] { display: none !important; }
