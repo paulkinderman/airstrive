@@ -9,7 +9,10 @@ import {
 } from '@/db/repo';
 import { fromServer, syncOnce, backfill } from '@/sync/engine';
 import { isWider, narrower } from '@/friends/audience';
-import { codeFrom, friendLink } from '@/friends/links';
+import {
+  codeFrom, friendLink, groupLink, gridLink, peekLink, inviteLink, inviteRoute, parseInvite, cleanCode, cleanGridId,
+} from '@/friends/links';
+import { clearPendingInvite, peekPendingInvite, savePendingInvite, takePendingInvite } from '@/friends/pendingInvite';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 
@@ -133,4 +136,51 @@ test('friend links carry a code that scans back out', () => {
   assert.equal(codeFrom('https://airstrive.vercel.app/app/f/ABCDEFGH2345?x=1'), 'ABCDEFGH2345');
   assert.equal(codeFrom('https://example.com/something'), null);
   assert.equal(codeFrom('short'), null);
+});
+
+test('every kind of share link parses back to its invite', () => {
+  assert.deepEqual(parseInvite(groupLink('ABCDEFGH2345')), { kind: 'g', code: 'ABCDEFGH2345' });
+  assert.deepEqual(parseInvite(peekLink('ABCDEFGH2345')), { kind: 'p', code: 'ABCDEFGH2345' });
+  assert.deepEqual(parseInvite(gridLink('grid_fall', 'ABCDEFGH2345')), { kind: 'a', code: 'grid_fall', from: 'ABCDEFGH2345' });
+  assert.deepEqual(parseInvite(gridLink('grid_fall')), { kind: 'a', code: 'grid_fall' });
+  assert.deepEqual(parseInvite('airstrive://g/abcdefgh2345'), { kind: 'g', code: 'ABCDEFGH2345' });
+  assert.deepEqual(parseInvite('  https://airstrive.vercel.app/app/p/ABCDEFGH2345/  '), { kind: 'p', code: 'ABCDEFGH2345' });
+  assert.deepEqual(parseInvite('https://airstrive.vercel.app/a/2b6c0f3e-1d1a-4e7a-9d3b-0c1f2e3d4c5b?f=bad'), { kind: 'a', code: '2b6c0f3e-1d1a-4e7a-9d3b-0c1f2e3d4c5b' });
+  assert.equal(parseInvite('https://example.com/g/ABCDEFGH2345'), null, "another site's link");
+  assert.equal(parseInvite('https://airstrive.vercel.app/g/SHORT'), null);
+  assert.equal(parseInvite('hello'), null);
+  for (const i of [{ kind: 'f', code: 'ABCDEFGH2345' }, { kind: 'g', code: 'ABCDEFGH2345' }, { kind: 'p', code: 'ABCDEFGH2345' },
+    { kind: 'a', code: 'grid_fall', from: 'ABCDEFGH2345' }] as const) {
+    assert.deepEqual(parseInvite(inviteLink(i)), i, i.kind);
+  }
+  assert.deepEqual(inviteRoute({ kind: 'a', code: 'grid_fall', from: 'ABCDEFGH2345' }),
+    { pathname: '/a/[gridId]', params: { gridId: 'grid_fall', f: 'ABCDEFGH2345' } });
+  assert.equal(cleanCode('abcdefgh2345'), 'ABCDEFGH2345');
+  assert.equal(cleanCode('abc'), null);
+  assert.equal(cleanGridId('grid_fall'), 'grid_fall');
+  assert.equal(cleanGridId('../x'), null);
+});
+
+test('a link opened before sign-in waits until it is taken', () => {
+  const store = new Map<string, string>();
+  const g = globalThis as { localStorage?: unknown };
+  const before = g.localStorage;
+  g.localStorage = {
+    getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k),
+  };
+  try {
+    savePendingInvite({ kind: 'g', code: 'ABCDEFGH2345' });
+    assert.deepEqual(peekPendingInvite(), { kind: 'g', code: 'ABCDEFGH2345' }, 'peeking leaves it');
+    assert.deepEqual(takePendingInvite(), { kind: 'g', code: 'ABCDEFGH2345' });
+    assert.equal(takePendingInvite(), null, 'taken once');
+    // A friend code saved by the version before other kinds of link.
+    store.set('airstrive.pending_friend_code', 'ABCDEFGH2345');
+    assert.deepEqual(takePendingInvite(), { kind: 'f', code: 'ABCDEFGH2345' });
+    assert.equal(peekPendingInvite(), null);
+    savePendingInvite({ kind: 'a', code: 'grid_fall', from: 'ABCDEFGH2345' });
+    clearPendingInvite();
+    assert.equal(peekPendingInvite(), null);
+  } finally {
+    g.localStorage = before;
+  }
 });

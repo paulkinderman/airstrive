@@ -8,6 +8,8 @@ import { loadBoard } from '@/db/repo';
 import { listGroupPeople, type GroupPerson } from '@/groups/repo';
 import { cancelGroupInvite, inviteToGroup, leaveGroup } from '@/groups/api';
 import { listFriends, type Friend } from '@/friends/api';
+import { groupLinkCode, shareLink, stopGroupLink } from '@/friends/invites';
+import { groupLink } from '@/friends/links';
 import { useLoad } from '@/friends/useLoad';
 import { Avatar, BackIcon } from '@/friends/bits';
 import { useAuth } from '@/auth/AuthProvider';
@@ -76,6 +78,36 @@ export default function TogetherScreen() {
     setBusy(null);
   };
 
+  // One link per group grid, shared by everyone in it: whoever opens it joins, signed up or not.
+  const onShareLink = async () => {
+    setBusy('link');
+    setError(null);
+    try {
+      const code = await groupLinkCode(groupId);
+      await shareLink(`Do ${board?.title ?? 'this grid'} with me on AirStrive:`, groupLink(code));
+    } catch {
+      setError("Couldn't make the link. Check your connection.");
+    }
+    setBusy(null);
+  };
+
+  const onStopLink = () => {
+    Alert.alert(
+      'Turn off the link?',
+      "Nobody new can join with it. Everyone already in stays, and sharing again makes a new link.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Turn it off',
+          style: 'destructive',
+          onPress: async () => {
+            try { await stopGroupLink(groupId); } catch { setError("Couldn't turn off the link. Check your connection."); }
+          },
+        },
+      ],
+    );
+  };
+
   const onLeave = () => {
     const last = members.length <= 1;
     Alert.alert(
@@ -124,7 +156,7 @@ export default function TogetherScreen() {
           <View style={{ gap: 4 }}>
             <Text variant="title">Who's doing this with you?</Text>
             <Text variant="body" style={{ color: colors.muted }}>
-              Invite friends below. Anyone in the group can do a square, and each of you adds your own words and photos to it.
+              Invite friends below, or share a link with anyone. Anyone in the group can do a square, and each of you adds your own words and photos to it.
             </Text>
           </View>
         )}
@@ -170,6 +202,16 @@ export default function TogetherScreen() {
           ))}
         </Section>
         {error && <Text variant="caption" style={{ color: colors.danger }}>{error}</Text>}
+
+        <Section title="Invite with a link">
+          <View style={{ padding: 14, gap: 10 }}>
+            <Text variant="body" style={{ color: colors.muted }}>
+              For anyone, friends or not, even if they're new to AirStrive. Whoever opens it joins this grid and becomes friends with you.
+            </Text>
+            <Button label={busy === 'link' ? 'Making the link…' : 'Share an invite link'} kind="secondary" onPress={onShareLink} disabled={busy === 'link'} />
+            <Button label="Turn off the link" kind="quiet" onPress={onStopLink} />
+          </View>
+        </Section>
 
         {left.length > 0 && (
           <Text variant="caption" style={{ color: colors.muted }}>

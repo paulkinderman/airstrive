@@ -13,6 +13,7 @@ import { GridCard } from '@/ui/GridCard';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { colors } from '@/theme';
+import { peekPendingInvite } from '@/friends/pendingInvite';
 
 /**
  * Step two: the Atlas categories that match the person's interests, then the rest of the
@@ -25,7 +26,11 @@ export default function Picks() {
   const insets = useSafeAreaInsets();
   const { finishOnboarding } = useAuth();
   const { data: grids, offline } = useAtlas();
-  const [chosen, setChosen] = useState<string[]>([]);
+  // A grid someone sent with "Try this grid" starts out chosen.
+  const [chosen, setChosen] = useState<string[]>(() => {
+    const invite = peekPendingInvite();
+    return invite?.kind === 'a' ? [invite.code] : [];
+  });
   const [preview, setPreview] = useState<AtlasGrid | null>(null);
   const [saving, setSaving] = useState(false);
 

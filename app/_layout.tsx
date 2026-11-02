@@ -94,8 +94,11 @@ function Routes() {
           <Stack.Screen name="together/start" />
           <Stack.Screen name="together/[groupId]" />
         </Stack.Protected>
-        {/* Friend links open in any state: before sign-in they wait for the shelf (src/friends/pendingCode.ts). */}
+        {/* Share links open in any state: before sign-in they wait for the shelf (src/friends/pendingInvite.ts). */}
         <Stack.Screen name="f/[code]" />
+        <Stack.Screen name="g/[code]" />
+        <Stack.Screen name="a/[gridId]" />
+        <Stack.Screen name="p/[code]" />
         {/* So does linking AirStrive to Alexa (src/auth/pendingConsent.ts). */}
         <Stack.Screen name="oauth/consent" />
       </Stack>

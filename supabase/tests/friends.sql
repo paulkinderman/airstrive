@@ -157,15 +157,33 @@ do $$ begin
   assert public.accept_friend_code((select c from the_code)) = 'friends', 'code accepted';
   assert (select count(*) from public.my_friends() where username = 'Ana') = 1, 'friends by code';
 end $$;
-set request.jwt.claim.sub = 'c3333333-0000-4000-8000-000000000003';
 do $$ begin
-  assert public.accept_friend_code((select c from the_code)) = 'invalid', 'a code works once';
-  assert (select count(*) from public.preview_friend_code((select c from the_code))) = 0, 'used code previews nothing';
+  assert public.accept_friend_code((select c from the_code)) = 'friends', 'using it again is harmless';
 end $$;
 set request.jwt.claim.sub = 'a1111111-0000-4000-8000-000000000001';
 do $$ begin
-  assert public.my_friend_code() <> (select c from the_code), 'a new code after use';
+  assert public.my_friend_code() = (select c from the_code), 'a code keeps working after use';
+  assert public.reset_friend_code() <> (select c from the_code), 'a new code after a reset';
+  assert public.my_friend_code() <> (select c from the_code), 'and it sticks';
 end $$;
+set request.jwt.claim.sub = 'c3333333-0000-4000-8000-000000000003';
+do $$ begin
+  assert public.accept_friend_code((select c from the_code)) = 'invalid', 'a reset code stops working';
+  assert (select count(*) from public.preview_friend_code((select c from the_code))) = 0, 'reset code previews nothing';
+end $$;
+-- An old one-use code from before links were reusable still works once.
+reset role;
+insert into public.friend_codes (code, user_id, expires_at) values ('OLDCODE23456', 'b2222222-0000-4000-8000-000000000002', now() + interval '7 days');
+set role authenticated;
+do $$ begin
+  assert public.accept_friend_code('OLDCODE23456') = 'friends', 'old code accepted';
+end $$;
+set request.jwt.claim.sub = 'd4444444-0000-4000-8000-000000000004';
+do $$ begin
+  assert public.accept_friend_code('OLDCODE23456') = 'invalid', 'an old code works once';
+end $$;
+set request.jwt.claim.sub = 'c3333333-0000-4000-8000-000000000003';
+select public.remove_friend('b2222222-0000-4000-8000-000000000002');
 
 -- ----- blocking -----
 set request.jwt.claim.sub = 'a1111111-0000-4000-8000-000000000001';

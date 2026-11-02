@@ -17,6 +17,7 @@ import { Menu, type MenuItem } from '@/ui/Menu';
 import { useWideLayout } from '@/ui/wide';
 import { WideGrid } from '@/wide/WideGrid';
 import { GridAudienceMenu } from '@/friends/GridAudienceMenu';
+import { peekMenuItems } from '@/friends/peekShare';
 import { AUDIENCE_LABEL, gridAudienceLine } from '@/friends/audience';
 import { startTogether } from '@/groups/startTogether';
 import { useTogetherLine } from '@/groups/useTogetherLine';
@@ -117,6 +118,7 @@ function PhoneGrid({ id, select }: { id: string; select?: string }) {
     { label: 'Leave this grid', destructive: true, onPress: openTogether },
   ] : [
     { label: `Who can see this: ${AUDIENCE_LABEL[board.audience]}`, onPress: () => setAudienceOpen(true) },
+    ...(configured ? peekMenuItems(board, id, sync.syncNow, () => setAudienceOpen(true)) : []),
     ...(configured ? [{ label: 'Do this together', onPress: () => void startTogether(db, router, id) }] : []),
     ...(mine ? [{ label: board.isPublic ? 'Stop sharing to the Atlas' : 'Share to the Atlas', onPress: onShare }] : []),
     { label: 'Preview and copy', onPress: () => router.push({ pathname: '/atlas/[gridId]', params: { gridId: board.gridId } }) },
